@@ -105,9 +105,10 @@
   ],
   "methods": [
     "auth.test (auth status / doctor)",
-    "apps.connections.open (slackctl listen — Socket Mode)"
+    "apps.connections.open (slackctl listen — Socket Mode transport)",
+    "rtm.connect (slackctl listen — RTM transport, session/user token)"
   ],
   "special_ops": [
-    "listen: Socket Mode websocket stream (apps.connections.open + envelope ack), NDJSON per event, --dms/--channels/--events filters"
+    "listen: live event stream with two transports — Socket Mode (apps.connections.open + envelope ack, app token) or RTM (rtm.connect, session/user token); NDJSON per event, --dms/--channels/--events filters, --transport auto|socket|rtm"
   ]
 }

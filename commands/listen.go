@@ -3,19 +3,26 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jjuanrivvera/slackctl/internal/auth"
+	"github.com/jjuanrivvera/slackctl/internal/config"
+	"github.com/jjuanrivvera/slackctl/internal/rtm"
+	"github.com/jjuanrivvera/slackctl/internal/slackevent"
 	"github.com/jjuanrivvera/slackctl/internal/socketmode"
 )
 
-// listen is the beyond-the-REST-mold command: a Socket Mode stream for pipe/filter use.
-// It needs an app-level token (xapp-) alongside the bot token, and the app must have
-// Socket Mode enabled with the wanted events subscribed (message.im, message.channels,
-// reaction_added, …) — Slack only delivers subscribed events for conversations the bot
-// is in.
+// listen is the beyond-the-REST-mold command: a live event stream for pipe/filter use. It
+// has two transports so it works with WHATEVER credential you have (DECISIONS.md):
+//   - Socket Mode  — needs an app-level token (xapp-); acks enveloped events.
+//   - RTM          — the legacy WebSocket; works with a user/session token (xoxc+xoxd),
+//     the credential a slack-mcp-style setup already has.
+//
+// --transport auto picks Socket Mode when an app token is present, else RTM.
 func init() {
 	register(func(root *cobra.Command) {
 		root.AddCommand(listenCmd())
@@ -29,63 +36,49 @@ func listenCmd() *cobra.Command {
 		events          []string
 		jsonOut         bool
 		rawOut          bool
+		transport       string
 		debugReconnects bool
 	)
 	cmd := &cobra.Command{
 		Use:   "listen",
-		Short: "Stream events over Socket Mode (DMs, channels) as lines",
-		Long: `Open a Socket Mode connection and stream events as they happen, one line each —
-human-readable by default, JSON with --json (for pipes), full envelopes with --raw.
+		Short: "Stream events live (Socket Mode or RTM) as lines",
+		Long: `Open a live connection and stream events as they happen, one line each —
+human-readable by default, JSON with --json (for pipes), full frames with --raw.
+
+Two transports, auto-selected by the credential you have (--transport to force):
+  socket  Socket Mode — needs an app-level token (xapp-, connections:write). Official,
+          robust, acks enveloped events. Store one with 'slackctl auth login --kind app'.
+  rtm     Real Time Messaging — the legacy WebSocket that works with a user/session token
+          (xoxp- or the xoxc+xoxd browser pair). No Slack app required: this is the path
+          that streams with the same credentials a slack-mcp setup already uses. RTM is
+          legacy and unofficial for xoxc tokens — a workspace may block it.
 
 Filters combine as a union: --dms OR --channels; --events then narrows by event type.
-With no filters, every subscribed event streams. Every envelope is acknowledged to Slack
-immediately (before filtering), so filtered-out events are consumed, not redelivered.
-
-Requires an app-level token (xapp-) with connections:write — store it with
-'slackctl auth login --kind app' — plus Socket Mode enabled and the event subscriptions
-(message.im, message.channels, reaction_added, …) configured for the app. Slack only
-sends message events for conversations the bot is a member of. Runs until Ctrl-C.`,
-		Example: `  slackctl listen --dms --json                       # stream DM events as NDJSON
-  slackctl listen --dms --channels C0123456,C0456789 --json
+With no filters, every received event streams. (Socket Mode only delivers events your app
+subscribed to and is a member of; RTM delivers everything the user account can see.)
+Runs until Ctrl-C.`,
+		Example: `  slackctl listen --dms --json                       # auto transport, DM events as NDJSON
+  slackctl listen --transport rtm --json             # force RTM (session/user token)
+  slackctl listen --channels C0123456,C0456789 --json
   slackctl listen --events message,reaction_added
-  slackctl listen --raw | jq .payload.event.type`,
+  slackctl listen --raw | jq .`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			client, err := clientForKind(cmd, auth.KindApp)
+			mode, err := resolveTransport(cmd, transport)
 			if err != nil {
 				return err
 			}
-			if client.DryRun {
-				return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
-			}
 
-			channelSet := map[string]bool{}
-			for _, c := range channels {
-				channelSet[c] = true
-			}
-			eventSet := map[string]bool{}
-			for _, e := range events {
-				eventSet[e] = true
-			}
-
+			channelSet := toSet(channels)
+			eventSet := toSet(events)
 			out := cmd.OutOrStdout()
-			sm := socketmode.New(client.OpenSocketURL, cmd.ErrOrStderr())
-			sm.DebugReconnects = debugReconnects
 
-			return sm.Run(cmd.Context(), func(env socketmode.Envelope) {
-				if rawOut {
-					b, _ := json.Marshal(env)
-					fmt.Fprintln(out, string(b))
-					return
-				}
-				event, meta, err := socketmode.ParseEvent(env)
-				if err != nil {
-					return // slash_commands/interactive frames stream only under --raw
-				}
+			// emit applies the shared filter + render to a bare event object (the same shape
+			// from both transports), so RTM and Socket Mode behave identically downstream.
+			emit := func(event json.RawMessage, meta slackevent.Meta) {
 				if len(eventSet) > 0 && !eventSet[meta.Type] {
 					return
 				}
-				// --dms / --channels union: match either; no filter = everything.
 				if dms || len(channelSet) > 0 {
 					dmMatch := dms && meta.IsDM()
 					if !dmMatch && !channelSet[meta.ChannelOf()] {
@@ -97,22 +90,127 @@ sends message events for conversations the bot is a member of. Runs until Ctrl-C
 					return
 				}
 				fmt.Fprintln(out, humanEventLine(event, meta))
-			})
+			}
+
+			switch mode {
+			case "socket":
+				return runSocketMode(cmd, out, rawOut, debugReconnects, emit)
+			default: // "rtm"
+				return runRTM(cmd, out, rawOut, emit)
+			}
 		},
 	}
 	cmd.Flags().BoolVar(&dms, "dms", false, "only events from direct messages")
 	cmd.Flags().StringSliceVar(&channels, "channels", nil, "only events from these conversation ids")
 	cmd.Flags().StringSliceVar(&events, "events", nil, "only these event types (message,reaction_added,…)")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit each event as one JSON line (NDJSON)")
-	cmd.Flags().BoolVar(&rawOut, "raw", false, "emit full Socket Mode envelopes as NDJSON (includes slash commands and interactivity)")
-	cmd.Flags().BoolVar(&debugReconnects, "debug-reconnects", false, "ask Slack to rotate the connection every ~360s (tests reconnect handling)")
+	cmd.Flags().BoolVar(&rawOut, "raw", false, "emit full wire frames as NDJSON (Socket Mode envelopes / RTM frames)")
+	cmd.Flags().StringVar(&transport, "transport", "auto", "event transport: auto|socket|rtm")
+	cmd.Flags().BoolVar(&debugReconnects, "debug-reconnects", false, "Socket Mode only: rotate the connection every ~360s (tests reconnect handling)")
 	markKind(cmd, kindRead)
 	return cmd
 }
 
+// resolveTransport turns the --transport choice into a concrete "socket" or "rtm". auto
+// picks Socket Mode when an app token is available, else RTM.
+func resolveTransport(cmd *cobra.Command, choice string) (string, error) {
+	switch choice {
+	case "socket", "rtm":
+		return choice, nil
+	case "auto", "":
+		if hasAppToken(cmd) {
+			return "socket", nil
+		}
+		return "rtm", nil
+	default:
+		return "", fmt.Errorf("unknown --transport %q (want auto|socket|rtm)", choice)
+	}
+}
+
+// hasAppToken reports whether an app-level token is resolvable, without erroring — the
+// signal for auto transport selection. It checks the app env vars and the profile's app
+// keyring entry, but NOT a session/bot credential (those don't open Socket Mode).
+func hasAppToken(cmd *cobra.Command) bool {
+	if strings.HasPrefix(os.Getenv("SLACKCTL_TOKEN"), "xapp-") || os.Getenv("SLACK_APP_TOKEN") != "" {
+		return true
+	}
+	profileName, _, err := resolveProfileName(cmd)
+	if err != nil {
+		return false
+	}
+	dir, err := config.Dir()
+	if err != nil {
+		return false
+	}
+	_, err = auth.New(dir).Get(auth.Key(profileName, auth.KindApp))
+	return err == nil
+}
+
+// runSocketMode streams via Socket Mode (app token). It acks every envelope before emitting.
+func runSocketMode(cmd *cobra.Command, out io.Writer, rawOut, debugReconnects bool, emit func(json.RawMessage, slackevent.Meta)) error {
+	client, err := clientForKind(cmd, auth.KindApp)
+	if err != nil {
+		return err
+	}
+	if client.DryRun {
+		return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
+	}
+	sm := socketmode.New(client.OpenSocketURL, cmd.ErrOrStderr())
+	sm.DebugReconnects = debugReconnects
+	return sm.Run(cmd.Context(), func(env socketmode.Envelope) {
+		if rawOut {
+			b, _ := json.Marshal(env)
+			fmt.Fprintln(out, string(b))
+			return
+		}
+		event, meta, err := socketmode.ParseEvent(env)
+		if err != nil {
+			return // slash_commands/interactive frames stream only under --raw
+		}
+		emit(event, meta)
+	})
+}
+
+// runRTM streams via the legacy RTM WebSocket (user/session token). RTM frames ARE the event
+// objects, so no envelope unwrapping is needed.
+func runRTM(cmd *cobra.Command, out io.Writer, rawOut bool, emit func(json.RawMessage, slackevent.Meta)) error {
+	// RTM needs a user-grade credential; the bot token can't call rtm.connect. KindUser
+	// resolves a user token or falls back to the browser-session pair.
+	client, err := clientForKind(cmd, auth.KindUser)
+	if err != nil {
+		return err
+	}
+	if client.DryRun {
+		return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
+	}
+	rc := rtm.New(client.OpenRTMURL, cmd.ErrOrStderr())
+	return rc.Run(cmd.Context(), func(frame json.RawMessage) {
+		if rawOut {
+			fmt.Fprintln(out, string(frame))
+			return
+		}
+		meta, err := slackevent.ParseMeta(frame)
+		if err != nil {
+			return
+		}
+		emit(frame, meta)
+	})
+}
+
+func toSet(items []string) map[string]bool {
+	if len(items) == 0 {
+		return nil
+	}
+	m := make(map[string]bool, len(items))
+	for _, it := range items {
+		m[it] = true
+	}
+	return m
+}
+
 // humanEventLine renders one event compactly for interactive use: ts, type, where, who,
 // and the text when there is one.
-func humanEventLine(event json.RawMessage, meta socketmode.EventMeta) string {
+func humanEventLine(event json.RawMessage, meta slackevent.Meta) string {
 	var e struct {
 		Text     string `json:"text"`
 		Reaction string `json:"reaction"`

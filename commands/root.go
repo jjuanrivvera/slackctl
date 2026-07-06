@@ -123,8 +123,10 @@ func clientFromCmd(cmd *cobra.Command) (*api.Client, error) {
 
 // clientForKind builds an API client authenticated with the given token kind. Token
 // precedence per kind: $SLACKCTL_TOKEN (explicit override, any kind) > the kind's
-// conventional env var (SLACK_BOT_TOKEN / SLACK_USER_TOKEN / SLACK_APP_TOKEN) > the
-// profile's keyring entry.
+// conventional env var (SLACK_BOT_TOKEN / SLACK_USER_TOKEN / SLACK_APP_TOKEN /
+// SLACK_XOXC_TOKEN+SLACK_XOXD_TOKEN) > the profile's keyring entry, then — for bot/user
+// kinds — a browser-session (xoxc+xoxd) fallback so a slack-mcp-style setup with no OAuth
+// token still works.
 func clientForKind(cmd *cobra.Command, kind auth.TokenKind) (*api.Client, error) {
 	f := cmd.Flags()
 	baseURLFlag, _ := f.GetString("base-url")
@@ -140,12 +142,7 @@ func clientForKind(cmd *cobra.Command, kind auth.TokenKind) (*api.Client, error)
 	profileName := cfg.ResolveProfileName(resolveWorkspaceFlag(cmd))
 	prof, _ := cfg.Profile(profileName)
 
-	token, err := resolveToken(profileName, kind)
-	if err != nil {
-		return nil, err
-	}
-
-	authr, err := api.NewTokenAuth(token)
+	authr, err := resolveAuth(profileName, kind)
 	if err != nil {
 		return nil, err
 	}
@@ -168,21 +165,60 @@ func clientForKind(cmd *cobra.Command, kind auth.TokenKind) (*api.Client, error)
 	return api.New(authr, opts...), nil
 }
 
-// resolveToken finds the secret for a profile+kind, with env overrides ahead of the keyring.
-func resolveToken(profileName string, kind auth.TokenKind) (string, error) {
-	if t := config.FirstNonEmpty(os.Getenv("SLACKCTL_TOKEN"), os.Getenv(kind.EnvVar())); t != "" {
-		return t, nil
+// allowsSessionFallback reports whether a browser-session (xoxc+xoxd) credential may stand
+// in for the requested kind. Session creds carry the user's own identity, so they satisfy
+// bot- and user-kind commands — but NOT the app kind, whose Socket Mode connection
+// (apps.connections.open) genuinely needs an app-level xapp token.
+func allowsSessionFallback(kind auth.TokenKind) bool {
+	return kind == auth.KindBot || kind == auth.KindUser
+}
+
+// resolveAuth builds the Authenticator for a profile+kind, honoring env overrides ahead of
+// the keyring, and falling back to browser-session (xoxc+xoxd) creds for bot/user kinds
+// when no OAuth token is stored.
+func resolveAuth(profileName string, kind auth.TokenKind) (api.Authenticator, error) {
+	// 1. Explicit single-token env override (any single-token kind).
+	if kind != auth.KindSession {
+		if t := config.FirstNonEmpty(os.Getenv("SLACKCTL_TOKEN"), os.Getenv(kind.EnvVar())); t != "" {
+			return api.NewTokenAuth(t)
+		}
 	}
+	// 2. Session env pair — for an explicit session kind, or as a fallback for bot/user.
+	if kind == auth.KindSession || allowsSessionFallback(kind) {
+		if xoxc, xoxd := os.Getenv("SLACK_XOXC_TOKEN"), os.Getenv("SLACK_XOXD_TOKEN"); xoxc != "" && xoxd != "" {
+			return api.NewSessionAuth(xoxc, xoxd)
+		}
+	}
+
 	dir, err := config.Dir()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	token, err := auth.New(dir).Get(auth.Key(profileName, kind))
-	if err != nil {
-		return "", fmt.Errorf("no %s token for workspace %q — run `slackctl auth login%s` (or set $%s)",
-			kind, profileName, loginKindFlag(kind), kind.EnvVar())
+	store := auth.New(dir)
+
+	// 3. Explicit session kind: only the stored pair.
+	if kind == auth.KindSession {
+		creds, err := auth.GetSession(store, profileName)
+		if err != nil {
+			return nil, fmt.Errorf("no session credentials for workspace %q — run `slackctl auth login --kind session` (or set $SLACK_XOXC_TOKEN and $SLACK_XOXD_TOKEN)", profileName)
+		}
+		return api.NewSessionAuth(creds.Token, creds.Cookie)
 	}
-	return token, nil
+
+	// 4. The kind's own OAuth token from the keyring.
+	if token, err := store.Get(auth.Key(profileName, kind)); err == nil {
+		return api.NewTokenAuth(token)
+	}
+
+	// 5. Browser-session fallback for bot/user kinds.
+	if allowsSessionFallback(kind) {
+		if creds, err := auth.GetSession(store, profileName); err == nil {
+			return api.NewSessionAuth(creds.Token, creds.Cookie)
+		}
+	}
+
+	return nil, fmt.Errorf("no %s token for workspace %q — run `slackctl auth login%s` (or set $%s, or store browser-session creds with `slackctl auth login --kind session`)",
+		kind, profileName, loginKindFlag(kind), kind.EnvVar())
 }
 
 // loginKindFlag renders the `auth login` flag suffix for a kind, for error hints.

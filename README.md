@@ -36,8 +36,28 @@ slackctl talks to Slack as a **Slack app**. Create one at <https://api.slack.com
 | Token | Where | Unlocks |
 |---|---|---|
 | Bot `xoxb-…` | OAuth & Permissions → Bot User OAuth Token | almost everything (default) |
-| User `xoxp-…` | OAuth & Permissions → User OAuth Token | `search`, `saved` (user-only methods), `--as-user` |
-| App-level `xapp-…` | Basic Information → App-Level Tokens (scope `connections:write`) | `slackctl listen` (Socket Mode) |
+| User `xoxp-…` | OAuth & Permissions → User OAuth Token | `search`, `saved` (user-only methods), `--as-user`, `listen` via RTM |
+| App-level `xapp-…` | Basic Information → App-Level Tokens (scope `connections:write`) | `slackctl listen` via Socket Mode |
+| Session `xoxc-…` + `xoxd-…` | your browser session (the scheme `slack-mcp-server` uses) | **everything except Socket Mode** — no Slack app needed; `listen` runs over RTM |
+
+### No Slack app? Use your browser session (like the Slack MCP)
+
+If you already drive Slack with `slack-mcp-server` (which authenticates with a browser
+`xoxc` token + `xoxd` cookie), point slackctl at the same credentials — no app to create:
+
+```sh
+slackctl auth login --kind session      # paste the xoxc token, then the xoxd cookie
+# or, env-only:
+export SLACK_XOXC_TOKEN=xoxc-…
+export SLACK_XOXD_TOKEN=xoxd-…
+slackctl auth status                     # verifies as your user
+slackctl conversations list              # reads/writes as you
+slackctl listen --dms --json             # streams over RTM (no app needed)
+```
+
+Session creds carry your own identity, so they back bot- and user-kind commands (search and
+saved items included). The one thing they can't do is Socket Mode; `listen` uses RTM instead
+(see the caveat below).
 
 Bot-token scopes to request, matched to what you'll use: `channels:read`, `groups:read`,
 `im:read`, `mpim:read` (listing), `channels:history` + `groups:history` + `im:history` +
@@ -99,22 +119,35 @@ slackctl conversations unreads --as-user --types im
 slackctl api conversations.info -q channel=C0123 --idempotent   # raw escape hatch
 ```
 
-## `slackctl listen` — Socket Mode stream
+## `slackctl listen` — live event stream
 
 Streams events (messages, reactions, …) as they happen, one line each — built for pipes.
-Requires the app-level token, Socket Mode enabled, and event subscriptions configured
-(`message.im`, `message.channels`, `reaction_added`, …). Slack only delivers message
-events for conversations the bot is a member of.
+It has **two transports** and auto-selects by the credential you have, so it works whether
+or not you created a Slack app:
+
+| Transport | Needs | Notes |
+|---|---|---|
+| **RTM** (`--transport rtm`) | user token (`xoxp-`) or the session pair (`xoxc-`+`xoxd-`) | No Slack app required — streams with the same creds a slack-mcp setup uses. Legacy/unofficial for `xoxc`; a workspace may block it. |
+| **Socket Mode** (`--transport socket`) | app-level token (`xapp-`, `connections:write`) + Socket Mode enabled + event subscriptions | Official and robust. Only delivers subscribed events for conversations the bot is in. |
+
+`--transport auto` (default) picks Socket Mode when an app token is present, else RTM.
 
 ```sh
-slackctl listen --dms --json                          # DM events as NDJSON
+slackctl listen --dms --json                          # auto transport, DM events as NDJSON
+slackctl listen --transport rtm --json                # force RTM (session/user token)
 slackctl listen --dms --channels C0123,C0456 --json   # DMs OR those channels
 slackctl listen --events message,reaction_added       # filter by event type
-slackctl listen --raw | jq .payload.event.type        # full envelopes
+slackctl listen --raw | jq .                           # full wire frames
 ```
 
-Envelopes are acknowledged to Slack immediately (before filtering), reconnects fetch a
-fresh URL with jittered backoff, and Ctrl-C shuts down cleanly.
+Both transports feed one filter/render path, reconnect with a fresh URL on drop (RTM keeps
+the socket alive with a periodic ping; Socket Mode acks each envelope before filtering), and
+shut down cleanly on Ctrl-C.
+
+> **RTM caveat:** Slack marks RTM as legacy and doesn't officially support it for `xoxc`
+> session tokens — it works today but could be disabled, and some Enterprise Grid workspaces
+> block it. For a durable listener, create a Slack app (no need to publish it), grab an
+> app-level token, and use `--transport socket`.
 
 ## AI agents
 

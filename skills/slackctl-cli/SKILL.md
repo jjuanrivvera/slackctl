@@ -15,8 +15,14 @@ metadata: {"openclaw":{"category":"messaging","emoji":"💬","requires":{"bins":
 - `slackctl` on PATH (`go install github.com/jjuanrivvera/slackctl/cmd/slackctl@latest`).
 - A configured workspace: `slackctl auth status` must succeed. If it doesn't, the human
   runs `slackctl init` (tokens go to the OS keyring; `SLACK_BOT_TOKEN` also works).
-- `search` and `saved` need a stored **user token** (`auth login --kind user`);
-  `listen` needs an **app-level token** (`auth login --kind app`).
+- `search` and `saved` need **user-grade** creds — a user token (`auth login --kind user`)
+  or a browser-session pair.
+- No Slack app? A **browser-session** pair works for everything except Socket Mode:
+  `auth login --kind session` (xoxc token + xoxd cookie), or `SLACK_XOXC_TOKEN` +
+  `SLACK_XOXD_TOKEN`. This is the same scheme `slack-mcp-server` uses.
+- `listen` picks its transport automatically: **Socket Mode** with an app-level token
+  (`auth login --kind app`), else **RTM** with a user/session token (legacy but needs no
+  app). Force with `--transport socket|rtm`.
 
 ## Why the CLI (not raw curl)
 
@@ -70,9 +76,9 @@ slackctl reactions add --channel C0123 --ts 1720000000.000100 --name thumbsup
 slackctl pins add --channel C0123 --ts 1720000000.000100
 slackctl saved list                  # user token; legacy stars API
 
-# Live events (Socket Mode; app token)
+# Live events (auto transport: Socket Mode with app token, else RTM with user/session)
 slackctl listen --dms --json | jq -r '.text'
-slackctl listen --channels C0123 --events message,reaction_added --json
+slackctl listen --transport rtm --channels C0123 --events message,reaction_added --json
 
 # Escape hatch for unwrapped methods
 slackctl api conversations.info -q channel=C0123 --idempotent

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zalando/go-keyring"
 
-	"github.com/jjuanrivvera/slackctl/internal/socketmode"
+	"github.com/jjuanrivvera/slackctl/internal/slackevent"
 )
 
 func TestConfigPath(t *testing.T) {
@@ -138,6 +138,8 @@ func TestListen_EndToEnd(t *testing.T) {
 	keyring.MockInit()
 	t.Setenv("SLACK_APP_TOKEN", "xapp-1-test")
 	t.Setenv("SLACK_BOT_TOKEN", "xoxb-test")
+	t.Setenv("SLACK_XOXC_TOKEN", "")
+	t.Setenv("SLACK_XOXD_TOKEN", "")
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("NO_COLOR", "1")
 
@@ -145,6 +147,7 @@ func TestListen_EndToEnd(t *testing.T) {
 	var out, errb strings.Builder
 	root.SetOut(&out)
 	root.SetErr(&errb)
+	// App token present → auto selects Socket Mode.
 	root.SetArgs([]string{"listen", "--dms", "--json", "--base-url", apiSrv.URL})
 
 	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
@@ -160,6 +163,62 @@ func TestListen_EndToEnd(t *testing.T) {
 	mustContain(t, errb.String(), "connected")
 }
 
+// TestListen_RTM_EndToEnd wires the RTM path: with only session creds (no app token),
+// `listen` auto-selects RTM, calls rtm.connect on the mock Web API, dials the local
+// WebSocket, and streams raw event frames — filtered by --channels.
+func TestListen_RTM_EndToEnd(t *testing.T) {
+	wsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		ctx := r.Context()
+		go func() {
+			for {
+				if _, _, err := c.Read(ctx); err != nil {
+					return
+				}
+			}
+		}()
+		writeJSON := func(v string) { _ = c.Write(ctx, websocket.MessageText, []byte(v)) }
+		writeJSON(`{"type":"hello"}`)
+		// RTM frames ARE the event objects — no envelope.
+		writeJSON(`{"type":"message","channel":"C1","user":"U1","ts":"1.0","text":"rtm hello"}`)
+		writeJSON(`{"type":"message","channel":"C9","user":"U2","ts":"2.0","text":"other channel"}`)
+		<-ctx.Done()
+	}))
+	t.Cleanup(wsSrv.Close)
+	wsURL := "ws" + strings.TrimPrefix(wsSrv.URL, "http")
+
+	apiSrv := newServer(t, routes{
+		"rtm.connect": `{"ok":true,"url":"` + wsURL + `"}`,
+	})
+
+	keyring.MockInit()
+	for _, v := range []string{"SLACK_BOT_TOKEN", "SLACK_USER_TOKEN", "SLACK_APP_TOKEN", "SLACKCTL_TOKEN"} {
+		t.Setenv(v, "")
+	}
+	t.Setenv("SLACK_XOXC_TOKEN", "xoxc-session")
+	t.Setenv("SLACK_XOXD_TOKEN", "xoxd-cookie")
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("NO_COLOR", "1")
+
+	root := NewRootCmd()
+	var out, errb strings.Builder
+	root.SetOut(&out)
+	root.SetErr(&errb)
+	root.SetArgs([]string{"listen", "--channels", "C1", "--json", "--base-url", apiSrv.URL})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	require.NoError(t, root.ExecuteContext(ctx), errb.String())
+
+	got := out.String()
+	mustContain(t, got, "rtm hello")
+	assert.NotContains(t, got, "other channel", "--channels C1 must filter out C9 events")
+	mustContain(t, errb.String(), "connected (RTM)")
+}
+
 func TestHumanEventLine(t *testing.T) {
 	event := json.RawMessage(`{"type":"message","text":"hola","subtype":"","reaction":""}`)
 	line := humanEventLine(event, metaFor("message", "C1", "U1", "9.0"))
@@ -173,7 +232,7 @@ func TestHumanEventLine(t *testing.T) {
 	assert.Contains(t, line, ":tada:")
 }
 
-func metaFor(typ, ch, user, ts string) (m socketmode.EventMeta) {
+func metaFor(typ, ch, user, ts string) (m slackevent.Meta) {
 	m.Type = typ
 	m.Channel = ch
 	m.User = user

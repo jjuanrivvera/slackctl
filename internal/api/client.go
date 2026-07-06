@@ -335,6 +335,11 @@ func (c *Client) printCurl(method string, params map[string]any, idempotent bool
 	}
 	b.WriteString(" -H ")
 	b.WriteString(shellQuote("Authorization: " + authz))
+	extra := c.auth.ExtraHeaders(!c.ShowToken)
+	for _, k := range sortedHeaderKeys(extra) {
+		b.WriteString(" -H ")
+		b.WriteString(shellQuote(k + ": " + extra[k]))
+	}
 	if !idempotent {
 		for _, k := range sortedKeys(params) {
 			b.WriteString(" --data-urlencode ")
@@ -342,6 +347,15 @@ func (c *Client) printCurl(method string, params map[string]any, idempotent bool
 		}
 	}
 	_, _ = fmt.Fprintln(c.dryRunW, b.String())
+}
+
+func sortedHeaderKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func sortedKeys(m map[string]any) []string {

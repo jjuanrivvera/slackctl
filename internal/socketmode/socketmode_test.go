@@ -15,6 +15,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/jjuanrivvera/slackctl/internal/slackevent"
 )
 
 // wsServer runs a real websocket endpoint whose per-connection script is driven by the
@@ -127,8 +129,12 @@ func TestRun_ReconnectsOnDisconnectFrame(t *testing.T) {
 	s := newWSServer(t, func(ctx context.Context, c *websocket.Conn, idx int) {
 		send(ctx, c, hello())
 		if idx == 1 {
-			// Routine rotation: the client must come back on a fresh connection.
+			// Routine rotation: the client must come back on a fresh connection. Hold the
+			// connection open after sending the frame (like the idx==2 branch) so it reliably
+			// flushes to the client before the handler returns tears the hijacked socket down
+			// — returning immediately races the write and leaves the client's Read hanging.
 			send(ctx, c, map[string]any{"type": "disconnect", "reason": "refresh_requested"})
+			<-ctx.Done()
 			return
 		}
 		send(ctx, c, eventEnvelope("env-2", `{"type":"message","channel":"C1","ts":"2.0"}`))
@@ -155,6 +161,7 @@ func TestRun_FreshURLPerConnection(t *testing.T) {
 		send(ctx, c, hello())
 		if idx == 1 {
 			send(ctx, c, map[string]any{"type": "disconnect", "reason": "refresh_requested"})
+			<-ctx.Done() // hold open so the frame flushes before teardown (see reconnect test)
 			return
 		}
 		send(ctx, c, eventEnvelope("env-3", `{"type":"message","ts":"3.0"}`))
@@ -252,16 +259,16 @@ func TestParseEvent(t *testing.T) {
 }
 
 func TestEventMeta_ReactionItemChannel(t *testing.T) {
-	var meta EventMeta
+	var meta slackevent.Meta
 	require.NoError(t, json.Unmarshal([]byte(`{"type":"reaction_added","user":"U1","item":{"channel":"C42"}}`), &meta))
 	assert.Equal(t, "C42", meta.ChannelOf())
 	assert.False(t, meta.IsDM())
 }
 
 func TestEventMeta_IsDMByPrefix(t *testing.T) {
-	m := EventMeta{Channel: "D0AB12"}
+	m := slackevent.Meta{Channel: "D0AB12"}
 	assert.True(t, m.IsDM())
-	m = EventMeta{Channel: "C0AB12"}
+	m = slackevent.Meta{Channel: "C0AB12"}
 	assert.False(t, m.IsDM())
 }
 

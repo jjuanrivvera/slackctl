@@ -52,8 +52,19 @@ pass and never silently re-decides.
 ## Tokens & auth
 
 - **Token kinds per workspace profile** → bot (xoxb, default), user (xoxp), app (xapp,
-  Socket Mode only), stored in the keyring under `<profile>`, `<profile>#user`,
-  `<profile>#app` ('#' is banned in profile names so the suffix cannot collide).
+  Socket Mode only), and session (xoxc token + xoxd cookie), stored in the keyring under
+  `<profile>`, `<profile>#user`, `<profile>#app`, `<profile>#session` ('#' is banned in
+  profile names so the suffix cannot collide). The session entry is one JSON blob
+  (`{"xoxc":…,"xoxd":…}`) so the pair can never be half-written.
+- **Session (browser) auth** → the scheme `slack-mcp-server` uses: an `xoxc-` bearer token
+  plus the paired `xoxd-` "d" cookie sent as `Cookie: d=<xoxd>`. It requires no created
+  Slack app, carries the user's own identity, and so is a valid FALLBACK for bot- and
+  user-kind commands (search/saved included) when no OAuth token is stored — this is the
+  "drive slackctl exactly like the Slack MCP" path. It does NOT back the app kind:
+  `apps.connections.open` (Socket Mode / `listen`) genuinely needs an app-level xapp token.
+  The xoxd value is sent verbatim (browsers store it already URL-encoded; re-encoding
+  breaks the session). Auth precedence per kind: `$SLACKCTL_TOKEN`/kind env var >
+  `$SLACK_XOXC_TOKEN`+`$SLACK_XOXD_TOKEN` > keyring OAuth token > keyring session pair.
 - **Env vars** → the ecosystem's real names: SLACK_BOT_TOKEN / SLACK_USER_TOKEN /
   SLACK_APP_TOKEN, plus SLACKCTL_TOKEN as an explicit any-kind override. Profile selector:
   SLACKCTL_WORKSPACE (SLACKCTL_PROFILE kept as generic alias).
@@ -88,6 +99,22 @@ pass and never silently re-decides.
   --events; --raw emits whole envelopes. Uses coder/websocket (maintained, minimal, no CGO).
 - **listen ack-before-filter** → envelopes are acked whether or not they match filters;
   filtering is client-side output shaping, not consumption semantics (unacked = redelivered).
+- **listen transports** → `listen` streams over EITHER transport so it works with whatever
+  credential you have; `--transport auto|socket|rtm` (default auto):
+  - **socket** — Socket Mode (`apps.connections.open`, app-level xapp token). Official,
+    robust, envelope + 3s ack. Auto picks this when an app token is resolvable.
+  - **rtm** — the legacy Real Time Messaging WebSocket (`rtm.connect`), which accepts a
+    user/session token (xoxp or the xoxc+xoxd browser pair). This is the "stream with the
+    same creds a slack-mcp setup already has" path — no Slack app needed. Auto picks this
+    when there's no app token. RTM frames ARE the event objects (no envelope, no ack); the
+    client keeps the socket alive with a 30s app-level ping and reconnects with a fresh URL.
+  - Both feed one shared filter/render path (`internal/slackevent.Meta`), so `--dms`/
+    `--channels`/`--events`/`--json`/`--raw` behave identically across transports.
+  - **Honest caveat (recorded, not hidden):** RTM is a legacy API and is *not officially
+    supported* for xoxc tokens — Slack could disable it and some Enterprise Grid workspaces
+    block it. Socket Mode (an xapp token, cheap to create without publishing an app) is the
+    durable path; RTM is the no-app convenience path. The `rtm.connect` error hint points
+    this out on `method_deprecated`/`not_allowed_token_type`.
 
 ## Testing
 

@@ -41,6 +41,8 @@ func run(t *testing.T, srv *httptest.Server, args ...string) (string, string, er
 	t.Setenv("SLACK_USER_TOKEN", "xoxp-test-token")
 	t.Setenv("SLACK_APP_TOKEN", "xapp-1-test-token")
 	t.Setenv("SLACKCTL_TOKEN", "")
+	t.Setenv("SLACK_XOXC_TOKEN", "")
+	t.Setenv("SLACK_XOXD_TOKEN", "")
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("NO_COLOR", "1")
 
@@ -62,7 +64,10 @@ func run(t *testing.T, srv *httptest.Server, args ...string) (string, string, er
 func runNoToken(t *testing.T, srv *httptest.Server, stdin string, args ...string) (string, string, error) {
 	t.Helper()
 	keyring.MockInit()
-	for _, v := range []string{"SLACK_BOT_TOKEN", "SLACK_USER_TOKEN", "SLACK_APP_TOKEN", "SLACKCTL_TOKEN"} {
+	for _, v := range []string{
+		"SLACK_BOT_TOKEN", "SLACK_USER_TOKEN", "SLACK_APP_TOKEN", "SLACKCTL_TOKEN",
+		"SLACK_XOXC_TOKEN", "SLACK_XOXD_TOKEN",
+	} {
 		t.Setenv(v, "")
 	}
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
@@ -89,6 +94,9 @@ func runIn(t *testing.T, dir string, srv *httptest.Server, token string, args ..
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("SLACKCTL_TOKEN", token)
+	for _, v := range []string{"SLACK_BOT_TOKEN", "SLACK_USER_TOKEN", "SLACK_APP_TOKEN", "SLACK_XOXC_TOKEN", "SLACK_XOXD_TOKEN"} {
+		t.Setenv(v, "")
+	}
 
 	root := NewRootCmd()
 	var out, errb bytes.Buffer

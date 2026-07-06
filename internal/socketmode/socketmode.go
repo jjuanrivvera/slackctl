@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/jjuanrivvera/slackctl/internal/slackevent"
 )
 
 // Envelope is one Socket Mode frame. hello/disconnect are connection-lifecycle frames;
@@ -186,47 +188,19 @@ type EventsAPIPayload struct {
 	Event   json.RawMessage `json:"event"`
 }
 
-// EventMeta is the subset of every event used for filtering.
-type EventMeta struct {
-	Type        string `json:"type"`
-	Channel     string `json:"channel"`
-	ChannelType string `json:"channel_type"` // im|mpim|channel|group on message events
-	User        string `json:"user"`
-	TS          string `json:"ts"`
-	Item        struct {
-		Channel string `json:"channel"`
-	} `json:"item"` // reaction_added/removed carry the channel here
-}
-
 // ParseEvent extracts the inner event and its filter metadata from an events_api envelope.
-func ParseEvent(env Envelope) (json.RawMessage, EventMeta, error) {
+// The metadata type is shared with the RTM transport (internal/slackevent).
+func ParseEvent(env Envelope) (json.RawMessage, slackevent.Meta, error) {
 	if env.Type != "events_api" {
-		return nil, EventMeta{}, errors.New("not an events_api envelope")
+		return nil, slackevent.Meta{}, errors.New("not an events_api envelope")
 	}
 	var p EventsAPIPayload
 	if err := json.Unmarshal(env.Payload, &p); err != nil {
-		return nil, EventMeta{}, err
+		return nil, slackevent.Meta{}, err
 	}
-	var meta EventMeta
-	if err := json.Unmarshal(p.Event, &meta); err != nil {
-		return nil, EventMeta{}, err
+	meta, err := slackevent.ParseMeta(p.Event)
+	if err != nil {
+		return nil, slackevent.Meta{}, err
 	}
 	return p.Event, meta, nil
-}
-
-// ChannelOf returns the event's conversation id wherever the event type carries it.
-func (m EventMeta) ChannelOf() string {
-	if m.Channel != "" {
-		return m.Channel
-	}
-	return m.Item.Channel
-}
-
-// IsDM reports whether the event happened in a direct message.
-func (m EventMeta) IsDM() bool {
-	if m.ChannelType == "im" {
-		return true
-	}
-	ch := m.ChannelOf()
-	return len(ch) > 0 && ch[0] == 'D'
 }

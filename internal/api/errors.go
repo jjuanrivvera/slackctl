@@ -54,7 +54,9 @@ func (e *APIError) hint() string {
 		}
 		return "the token lacks a required scope — add it under OAuth & Permissions and reinstall the app"
 	case "not_allowed_token_type":
-		return "this method needs a different token kind (often a user token, xoxp-) — store one with `slackctl auth login --kind user` and pass --as-user"
+		return "this method needs a different token kind (often a user token, xoxp-) — store one with `slackctl auth login --kind user` and pass --as-user (for `listen`, RTM needs a user/session token; Socket Mode needs an app token)"
+	case "method_deprecated", "deprecated_endpoint":
+		return "Slack has retired this method — for `listen`, RTM is legacy and may be blocked here; create a Slack app and use `--transport socket` with an app token (`auth login --kind app`)"
 	case "no_permission", "ekm_access_denied", "restricted_action":
 		return "the token's app or user is not allowed to do this — check app permissions and workspace policy"
 	case "channel_not_found":

@@ -308,10 +308,24 @@ func TestListen_RejectsDryRun(t *testing.T) {
 	assert.Contains(t, err.Error(), "dry-run")
 }
 
-func TestListen_NeedsAppToken(t *testing.T) {
+func TestListen_NeedsCredential(t *testing.T) {
+	// No credentials at all: auto picks RTM (no app token) and fails fast asking for a
+	// user/session credential — it must NOT hang trying to dial.
 	_, _, err := runNoToken(t, nil, "", "listen")
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "auth login")
+}
+
+func TestListen_ForceSocketNeedsAppToken(t *testing.T) {
+	_, _, err := runNoToken(t, nil, "", "listen", "--transport", "socket")
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--kind app")
+}
+
+func TestListen_UnknownTransportRejected(t *testing.T) {
+	_, _, err := run(t, nil, "listen", "--transport", "carrier-pigeon")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown --transport")
 }
 
 func TestInvalidOutputFormatRejected(t *testing.T) {

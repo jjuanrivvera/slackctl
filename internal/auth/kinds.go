@@ -12,12 +12,16 @@ const (
 	KindBot  TokenKind = "bot"
 	KindUser TokenKind = "user"
 	KindApp  TokenKind = "app"
+	// KindSession is a browser-session pair (xoxc token + xoxd cookie) — the scheme
+	// slack-mcp-server uses. Stored as one JSON keyring entry; acts as the user's own
+	// identity, so it backs both bot- and user-kind commands when no OAuth token exists.
+	KindSession TokenKind = "session"
 )
 
 // Valid reports whether k is a known kind.
 func (k TokenKind) Valid() bool {
 	switch k {
-	case KindBot, KindUser, KindApp:
+	case KindBot, KindUser, KindApp, KindSession:
 		return true
 	}
 	return false
@@ -31,6 +35,8 @@ func (k TokenKind) EnvVar() string {
 		return "SLACK_USER_TOKEN"
 	case KindApp:
 		return "SLACK_APP_TOKEN"
+	case KindSession:
+		return "SLACK_XOXC_TOKEN" // paired with SLACK_XOXD_TOKEN (the d cookie)
 	default:
 		return "SLACK_BOT_TOKEN"
 	}
