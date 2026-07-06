@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/jjuanrivvera/slackctl/internal/auth"
 )
 
 // The users family. `users search` is a documented composite: Slack has no public
@@ -77,9 +79,67 @@ func init() {
 					{Name: "include-labels", Kind: flagBool, Usage: "include custom-field labels"},
 				},
 			},
+			{
+				Use: "set-presence", Method: "users.setPresence", Kind: kindWrite,
+				Short:   "Set your presence (auto or away)",
+				Example: "  slackctl users set-presence --presence away",
+				Flags: []flagSpec{
+					{Name: "presence", Kind: flagString, Required: true, Usage: "auto|away"},
+				},
+			},
 		},
-		Extra: []func() *cobra.Command{usersSearchCmd},
+		Extra: []func() *cobra.Command{usersSearchCmd, usersSetStatusCmd},
 	})
+}
+
+// usersSetStatusCmd sets the token owner's custom status (text + emoji + optional expiry) via
+// users.profile.set, which takes a profile object rather than flat fields. User-token only.
+func usersSetStatusCmd() *cobra.Command {
+	var text, emoji string
+	var expiration int64
+	cmd := &cobra.Command{
+		Use:   "set-status",
+		Short: "Set your Slack status (text, emoji, expiry)",
+		Long: `Set the custom status on your own profile. Clear it by passing empty --text and
+--emoji. Needs a user or session token (a bot has no personal status).`,
+		Example: `  slackctl users set-status --text "In a meeting" --emoji :calendar:
+  slackctl users set-status --text "Lunch" --emoji :taco: --expiration 1735689600
+  slackctl users set-status --text "" --emoji ""     # clear`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, err := clientForKind(cmd, auth.KindUser)
+			if err != nil {
+				return err
+			}
+			profile := map[string]any{
+				"status_text":       text,
+				"status_emoji":      emoji,
+				"status_expiration": expiration,
+			}
+			raw, err := client.Call(cmd.Context(), "users.profile.set", map[string]any{"profile": profile}, false)
+			if err != nil {
+				return err
+			}
+			if raw == nil { // dry-run
+				return nil
+			}
+			return render(cmd, extractField2(raw, "profile"))
+		},
+	}
+	cmd.Flags().StringVar(&text, "text", "", "status text")
+	cmd.Flags().StringVar(&emoji, "emoji", "", "status emoji, e.g. :coffee:")
+	cmd.Flags().Int64Var(&expiration, "expiration", 0, "unix timestamp when the status clears (0 = never)")
+	markKind(cmd, kindWrite)
+	return cmd
+}
+
+// extractField2 is extractField for hand-written commands (same dotted-key semantics).
+func extractField2(raw json.RawMessage, key string) json.RawMessage {
+	out, err := extractField(raw, key)
+	if err != nil {
+		return raw
+	}
+	return out
 }
 
 // usersSearchCmd filters users.list client-side by name / real name / email substring.

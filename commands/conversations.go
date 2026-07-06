@@ -198,6 +198,6 @@ group DMs (mpim). Channel ids look like C…, DMs D…, groups G….`,
 				},
 			},
 		},
-		Extra: []func() *cobra.Command{unreadsCmd},
+		Extra: []func() *cobra.Command{unreadsCmd, conversationsExportCmd},
 	})
 }

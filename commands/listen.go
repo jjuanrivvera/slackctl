@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -37,6 +39,7 @@ func listenCmd() *cobra.Command {
 		jsonOut         bool
 		rawOut          bool
 		transport       string
+		since           string
 		debugReconnects bool
 	)
 	cmd := &cobra.Command{
@@ -92,6 +95,14 @@ Runs until Ctrl-C.`,
 				fmt.Fprintln(out, humanEventLine(event, meta))
 			}
 
+			// --since: replay recent history for the named channels BEFORE going live, so you
+			// don't miss what happened while disconnected. Only meaningful with --channels.
+			if since != "" {
+				if err := backfillSince(cmd, channels, since, emit); err != nil {
+					return err
+				}
+			}
+
 			switch mode {
 			case "socket":
 				return runSocketMode(cmd, out, rawOut, debugReconnects, emit)
@@ -106,9 +117,74 @@ Runs until Ctrl-C.`,
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit each event as one JSON line (NDJSON)")
 	cmd.Flags().BoolVar(&rawOut, "raw", false, "emit full wire frames as NDJSON (Socket Mode envelopes / RTM frames)")
 	cmd.Flags().StringVar(&transport, "transport", "auto", "event transport: auto|socket|rtm")
+	cmd.Flags().StringVar(&since, "since", "", "replay --channels history since a ts or duration (e.g. 1h, 30m) before streaming live")
 	cmd.Flags().BoolVar(&debugReconnects, "debug-reconnects", false, "Socket Mode only: rotate the connection every ~360s (tests reconnect handling)")
 	markKind(cmd, kindRead)
 	return cmd
+}
+
+// backfillSince replays recent history for the given channels through emit before the live
+// stream starts. since is a Slack ts, a unix seconds value, or a Go duration ("1h", "30m")
+// relative to now. conversations.history messages omit the channel, so it's injected so the
+// filters and rendering see the same shape as a live event.
+func backfillSince(cmd *cobra.Command, channels []string, since string, emit func(json.RawMessage, slackevent.Meta)) error {
+	if len(channels) == 0 {
+		fmt.Fprintln(cmd.ErrOrStderr(), "listen: --since needs --channels (nothing to backfill); streaming live only")
+		return nil
+	}
+	oldest := resolveSince(since)
+	client, err := clientFromCmd(cmd)
+	if err != nil {
+		return err
+	}
+	for _, ch := range channels {
+		raw, err := client.CallAllPages(cmd.Context(), "conversations.history",
+			map[string]any{"channel": ch, "oldest": oldest, "limit": 200}, "messages", 0)
+		if err != nil {
+			return err
+		}
+		var msgs []json.RawMessage
+		if err := json.Unmarshal(raw, &msgs); err != nil {
+			return err
+		}
+		// conversations.history returns newest-first; replay oldest-first to mirror live order.
+		for i := len(msgs) - 1; i >= 0; i-- {
+			withCh := injectChannel(msgs[i], ch)
+			meta, err := slackevent.ParseMeta(withCh)
+			if err != nil {
+				continue
+			}
+			emit(withCh, meta)
+		}
+	}
+	return nil
+}
+
+// resolveSince turns a duration ("1h") into an absolute unix-seconds oldest bound; a raw ts
+// or unix value passes through unchanged.
+func resolveSince(since string) string {
+	if d, err := time.ParseDuration(since); err == nil {
+		return strconv.FormatInt(time.Now().Add(-d).Unix(), 10)
+	}
+	return since
+}
+
+// injectChannel adds the channel id to a history message (which omits it) so downstream
+// filters keyed on the channel behave the same as for a live event.
+func injectChannel(msg json.RawMessage, channel string) json.RawMessage {
+	var m map[string]json.RawMessage
+	if json.Unmarshal(msg, &m) != nil {
+		return msg
+	}
+	if _, ok := m["channel"]; !ok {
+		ch, _ := json.Marshal(channel)
+		m["channel"] = ch
+	}
+	out, err := json.Marshal(m)
+	if err != nil {
+		return msg
+	}
+	return out
 }
 
 // resolveTransport turns the --transport choice into a concrete "socket" or "rtm". auto

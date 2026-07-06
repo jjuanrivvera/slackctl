@@ -37,12 +37,16 @@ Request the scopes matching what you'll call, under **OAuth & Permissions**, the
 app:
 
 `channels:read` `groups:read` `im:read` `mpim:read` (listing) · `channels:history`
-`groups:history` `im:history` `mpim:history` (history/replies) · `chat:write` (posting) ·
+`groups:history` `im:history` `mpim:history` (history/replies/export) · `chat:write` (posting) ·
 `channels:manage` `groups:write` `im:write` `mpim:write` (create/invite/topic/mark) ·
-`channels:join` · `reactions:read` `reactions:write` · `users:read` `users:read.email` ·
-`usergroups:read` `usergroups:write` · `pins:read` `pins:write` · `emoji:read` · `team:read`.
+`channels:join` · `reactions:read` `reactions:write` · `users:read` `users:read.email`
+`users:write` (presence) · `usergroups:read` `usergroups:write` · `pins:read` `pins:write` ·
+`bookmarks:read` `bookmarks:write` · `files:read` `files:write` (upload/download) ·
+`dnd:read` · `canvases:read` `canvases:write` · `emoji:read` · `team:read`.
 
-For the user token: `search:read`, `stars:read`, `stars:write`.
+For the user token: `search:read`, `stars:read`, `stars:write`, `dnd:write` (snooze),
+`users.profile:write` (set status). `assistant search-context` works with a bot token
+(`search:read.public` + friends) — unlike `search`, which needs a user token.
 
 ## No Slack app? Use a browser session
 

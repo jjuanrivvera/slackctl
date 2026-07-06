@@ -51,6 +51,11 @@ type Client struct {
 	// DebugReconnects appends debug_reconnects=true so Slack rotates the connection every
 	// ~360s — for exercising the reconnect path.
 	DebugReconnects bool
+	// ReadTimeout bounds how long a single frame read may block. Slack pings a healthy
+	// connection well within this window, so a read that stalls past it means the connection
+	// went half-open (server gone, no FIN) — the client reconnects instead of hanging forever.
+	// Zero uses the default (90s); negative disables the deadline (tests).
+	ReadTimeout time.Duration
 
 	rng func() float64
 }
@@ -121,7 +126,7 @@ func (c *Client) runOnce(ctx context.Context, handler func(Envelope)) (bool, err
 
 	var helloSeen bool
 	for {
-		_, data, err := ws.Read(ctx)
+		data, err := c.readFrame(ctx, ws)
 		if err != nil {
 			return helloSeen, err
 		}
@@ -148,6 +153,28 @@ func (c *Client) runOnce(ctx context.Context, handler func(Envelope)) (bool, err
 		}
 		handler(env)
 	}
+}
+
+// readFrame reads one frame, bounding the wait by ReadTimeout so a half-open connection
+// (server vanished without a close frame) reconnects instead of blocking forever. A timeout
+// that fires while the parent ctx is still live is surfaced as an error to trigger reconnect;
+// a parent-cancellation is surfaced too (Run treats it as a clean shutdown).
+func (c *Client) readFrame(ctx context.Context, ws conn) ([]byte, error) {
+	timeout := c.ReadTimeout
+	if timeout == 0 {
+		timeout = 90 * time.Second
+	}
+	if timeout < 0 {
+		_, data, err := ws.Read(ctx)
+		return data, err
+	}
+	readCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	_, data, err := ws.Read(readCtx)
+	if err != nil && ctx.Err() == nil && readCtx.Err() != nil {
+		return nil, fmt.Errorf("read timed out after %s (connection idle/half-open) — reconnecting", timeout)
+	}
+	return data, err
 }
 
 func (c *Client) logf(format string, args ...any) {

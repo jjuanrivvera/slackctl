@@ -36,6 +36,7 @@ group DMs (mpim). Channel ids look like C…, DMs D…, groups G….
 * [slackctl conversations archive](slackctl_conversations_archive.md)	 - Archive a conversation
 * [slackctl conversations close](slackctl_conversations_close.md)	 - Close a DM or group DM
 * [slackctl conversations create](slackctl_conversations_create.md)	 - Create a channel
+* [slackctl conversations export](slackctl_conversations_export.md)	 - Export a conversation's full history to JSONL
 * [slackctl conversations history](slackctl_conversations_history.md)	 - Fetch a conversation's message history
 * [slackctl conversations info](slackctl_conversations_info.md)	 - Show one conversation
 * [slackctl conversations invite](slackctl_conversations_invite.md)	 - Invite users to a conversation

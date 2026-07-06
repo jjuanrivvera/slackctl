@@ -95,6 +95,7 @@ func eventEnvelope(id, eventJSON string) map[string]any {
 func newTestClient(s *wsServer) *Client {
 	c := New(func(context.Context) (string, error) { return s.wsURL(), nil }, io.Discard)
 	c.rng = func() float64 { return 0 }
+	c.ReadTimeout = -1 // disable the idle deadline in tests that hold connections open
 	return c
 }
 
@@ -177,6 +178,7 @@ func TestRun_FreshURLPerConnection(t *testing.T) {
 		return s.wsURL(), nil
 	}, io.Discard)
 	c.rng = func() float64 { return 0 }
+	c.ReadTimeout = -1
 	done := make(chan error, 1)
 	go func() { done <- c.Run(ctx, func(Envelope) { cancel() }) }()
 	require.NoError(t, <-done)
@@ -295,4 +297,31 @@ func TestDebugReconnectsAppendsParam(t *testing.T) {
 	// Run exits before dialing on a pre-cancelled ctx; call runOnce directly instead.
 	_, _ = c.runOnce(t.Context(), func(Envelope) {})
 	assert.Equal(t, "wss://x/link?ticket=t&debug_reconnects=true", dialed)
+}
+
+func TestReadTimeout_ReconnectsOnIdle(t *testing.T) {
+	// A connection that says hello then goes silent (half-open) must trigger a reconnect
+	// once the read deadline fires, not hang forever.
+	s := newWSServer(t, func(ctx context.Context, c *websocket.Conn, _ int) {
+		send(ctx, c, hello())
+		<-ctx.Done() // never send another frame
+	})
+	c := New(func(context.Context) (string, error) { return s.wsURL(), nil }, io.Discard)
+	c.rng = func() float64 { return 0 }
+	c.ReadTimeout = 150 * time.Millisecond
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- c.Run(ctx, func(Envelope) {}) }()
+
+	// Wait for a second connection: the idle read must have timed out and reconnected.
+	deadline := time.After(5 * time.Second)
+	for s.connCount() < 2 {
+		select {
+		case <-deadline:
+			t.Fatal("no reconnect after the read deadline")
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+	cancel()
+	<-done
 }

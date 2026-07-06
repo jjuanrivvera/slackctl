@@ -5,15 +5,17 @@ pass and never silently re-decides.
 
 ## Scope & completeness
 
-- **Surface scope** → the core messaging/read/people surface (conversations list/history/replies/search/
-  unreads/post/mark, channels, users search/info, usergroups, reactions, saved items) plus a
-  hand-written `listen` event stream — a focused surface, not the full 308-method API.
-- coverage-waiver: the surface is scoped to the core messaging/read surface + `listen` (60 of the 308
-  enumerated methods, 19%). Of the remainder: admin.* (106) is Enterprise-Grid-admin-only,
-  files.upload is sunset (Nov 2025) and the external-upload flow is out of scope, rtm.*/dialog.*/
-  reminders.*/users.setActive are deprecated or retired, and views/workflows/functions/canvases/
-  slackLists/apps.datastore serve app-platform builders, not a messaging CLI. Widening is
-  tracked as a v2 candidate; the enumeration total stays in the manifest so the gap is loud.
+- **Surface scope** → the core messaging/read/people surface (conversations list/history/
+  replies/search/unreads/export/post/mark, channels, users search/info/status/presence,
+  usergroups, reactions, saved items, pins, bookmarks, files upload/download, dnd, canvases,
+  assistant search) plus a hand-written `listen` event stream — a focused surface, not 308.
+- coverage-waiver: the surface is scoped to the core messaging/read/people surface + files +
+  dnd + bookmarks + canvases + `listen` (86 of the 308 enumerated methods, 27%). Of the
+  remainder: admin.* (106) is Enterprise-Grid-admin-only, files.upload is sunset (Nov 2025 —
+  the external-upload flow IS shipped), rtm.*/dialog.*/reminders.*/users.setActive are
+  deprecated or retired, and views/workflows/functions/slackLists/apps.datastore serve
+  app-platform builders, not a messaging CLI. Widening stays a candidate; the enumeration
+  total stays in the manifest so the gap is loud.
 - **Enumeration source** → `https://docs.slack.dev/reference/methods.json` (308 entries,
   2026-07-06), cross-checked against sitemap.xml and the Docusaurus route registry (both 308).
   The official `slackapi/slack-api-specs` OpenAPI is stale (174 methods, 10 removed ones) —
@@ -115,6 +117,35 @@ pass and never silently re-decides.
     block it. Socket Mode (an xapp token, cheap to create without publishing an app) is the
     durable path; RTM is the no-app convenience path. The `rtm.connect` error hint points
     this out on `method_deprecated`/`not_allowed_token_type`.
+
+## v0.2 additions
+
+- **files upload** → `files.upload` was sunset (Nov 2025), so `files upload` runs the
+  external-upload flow: `files.getUploadURLExternal` → multipart POST of the bytes to the
+  returned URL (unauthenticated; the URL carries the ticket) → `files.completeUploadExternal`
+  to share. `files download` resolves `url_private` via `files.info` then GETs it WITH the
+  Authorization header (Slack file URLs require it). Both live in `internal/api/files.go`.
+- **assistant search-context** → wrapped specifically because `assistant.search.context`
+  accepts a BOT token, unlike `search.*` (user-only) — it gives bot-only setups a search path.
+- **dnd/status/presence token kinds** → `dnd.set*` and `users.profile.set` have no bot scope
+  (user-only) → `tokenUserRequired`; `dnd.info`/`teamInfo`/`users.setPresence` take either.
+  `users set-status` is a hand-written Extra: `users.profile.set` takes a `profile` OBJECT, so
+  the command builds `{status_text,status_emoji,status_expiration}` from flags.
+- **canvas JSON args** → canvas edits are structured operations, so `--content`/`--changes`/
+  `--criteria` are `flagJSON` (Slack's own edit-op shapes) rather than invented flat flags.
+- **beyond-API composites** → `conversations export` (JSONL dump of history + optional thread
+  replies, deduping the parent), `msg template` (Go text/template with `missingkey=error` so an
+  unresolved var fails rather than posts a blank; `--blocks` sends the rendered JSON as Block
+  Kit), and `listen --since` (backfills `--channels` history before the live stream; a bare
+  duration like `1h` resolves to an oldest bound; the channel is injected into history messages
+  so filters see the live event shape).
+- **listen read-deadline** → both transports bound a single frame read by `ReadTimeout`
+  (default 90s; Slack pings a healthy socket well within it). A read that stalls past it means
+  the connection went half-open (server gone, no FIN) → reconnect instead of hanging forever.
+- **read-shape allowlist** → the agent-guard raw-`api` gate and its classification invariant
+  recognize `teaminfo`/`context`/`lookup` as read-shaped final segments (dnd.teamInfo,
+  assistant.search.context, canvases.sections.lookup), so those reads pass the hatch while
+  every mutating method stays blocked.
 
 ## Testing
 

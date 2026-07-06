@@ -44,6 +44,7 @@ slackctl listen [flags]
   -h, --help               help for listen
       --json               emit each event as one JSON line (NDJSON)
       --raw                emit full wire frames as NDJSON (Socket Mode envelopes / RTM frames)
+      --since string       replay --channels history since a ts or duration (e.g. 1h, 30m) before streaming live
       --transport string   event transport: auto|socket|rtm (default "auto")
 ```
 

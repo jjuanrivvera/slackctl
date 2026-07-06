@@ -3,6 +3,29 @@
 All notable changes to slackctl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.2.0] - 2026-07-06
+
+### Added
+- `files` family: list/info/delete plus `upload` (the external-upload flow, since
+  files.upload was sunset) and `download` (authed fetch of a private URL).
+- `dnd` family (info/set-snooze/end-snooze/end-dnd/team-info) and `users set-status` /
+  `users set-presence` for managing your own availability.
+- `bookmarks` family (list/add/edit/remove).
+- `assistant search-context` — full-text search that works with a **bot** token (unlike
+  `search`, which is user-token-only).
+- `canvases` family (create/edit/delete/access-set/access-delete/sections-lookup).
+- `conversations export` — dump a channel's full history (and, with `--threads`, its
+  replies) to JSONL.
+- `msg template` — render a Go text/template with `--set key=value` variables and post it
+  (`--blocks` for Block Kit).
+- `listen --since` — replay recent `--channels` history before the live stream.
+
+### Changed
+- `listen` bounds each frame read with a timeout so a half-open connection reconnects
+  instead of hanging.
+- Clearer `token_expired` hint for rotating browser-session credentials.
+- Manifest coverage rises to 86/308 enumerated methods (27%).
+
 ## [0.1.0] - 2026-07-06
 
 ### Added

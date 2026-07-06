@@ -180,6 +180,7 @@ func hookScript(c classification) string {
 # The raw "slackctl api <method>" escape hatch is gated at the METHOD position:
 # a method passes only when its final dot-segment is a read shape (get*/list/
 # info/test/history/replies/members/messages/files/all/lookupByEmail/
+# teamInfo/context/lookup/
 # conversations) — how every read in Slack's method naming ends. Everything
 # else — including flags-before-method invocations — is blocked. A -q value or
 # path that merely CONTAINS "delete" is not affected.
@@ -241,7 +242,7 @@ api_is_blocked() {
     [ -n "$m" ] || continue
     seg="${m##*.}"
     case "$seg" in
-      [Gg][Ee][Tt]*|[Ll][Ii][Ss][Tt]|[Ii][Nn][Ff][Oo]|[Tt][Ee][Ss][Tt]|[Hh][Ii][Ss][Tt][Oo][Rr][Yy]|[Rr][Ee][Pp][Ll][Ii][Ee][Ss]|[Mm][Ee][Mm][Bb][Ee][Rr][Ss]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee][Ss]|[Ff][Ii][Ll][Ee][Ss]|[Aa][Ll][Ll]|[Ll][Oo][Oo][Kk][Uu][Pp][Bb][Yy][Ee][Mm][Aa][Ii][Ll]|[Cc][Oo][Nn][Vv][Ee][Rr][Ss][Aa][Tt][Ii][Oo][Nn][Ss]) ;; # read shapes pass
+      [Gg][Ee][Tt]*|[Ll][Ii][Ss][Tt]|[Ii][Nn][Ff][Oo]|[Tt][Ee][Ss][Tt]|[Hh][Ii][Ss][Tt][Oo][Rr][Yy]|[Rr][Ee][Pp][Ll][Ii][Ee][Ss]|[Mm][Ee][Mm][Bb][Ee][Rr][Ss]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee][Ss]|[Ff][Ii][Ll][Ee][Ss]|[Aa][Ll][Ll]|[Ll][Oo][Oo][Kk][Uu][Pp][Bb][Yy][Ee][Mm][Aa][Ii][Ll]|[Cc][Oo][Nn][Vv][Ee][Rr][Ss][Aa][Tt][Ii][Oo][Nn][Ss]|[Tt][Ee][Aa][Mm][Ii][Nn][Ff][Oo]|[Cc][Oo][Nn][Tt][Ee][Xx][Tt]|[Ll][Oo][Oo][Kk][Uu][Pp]) ;; # read shapes pass
       *) return 0 ;;
     esac
   done < <(printf '%s' "$flat" \

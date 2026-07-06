@@ -6,8 +6,8 @@
     {
       "name": "slackctl-cli",
       "source": "./",
-      "version": "0.1.0",
-      "description": "Drive the Slack Web API from the terminal: conversations, messages, search, users, usergroups, reactions, saved items, and a Socket Mode event stream.",
+      "version": "0.2.0",
+      "description": "Drive the Slack Web API from the terminal: conversations, messages (post/template/export), search, files, canvases, users & status, usergroups, reactions, pins, bookmarks, saved items, and a live event stream (Socket Mode or RTM).",
       "homepage": "https://github.com/jjuanrivvera/slackctl",
       "keywords": ["slack", "cli", "socket-mode", "ai-agent", "mcp"]
     }

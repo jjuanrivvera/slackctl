@@ -12,7 +12,7 @@
     {
       "name": "conversations",
       "aliases": ["conv", "channels"],
-      "verbs": ["list", "info", "history", "replies", "members", "create", "rename", "archive", "unarchive", "invite", "join", "leave", "kick", "set-topic", "set-purpose", "mark", "open", "close", "unreads"],
+      "verbs": ["list", "info", "history", "replies", "members", "create", "rename", "archive", "unarchive", "invite", "join", "leave", "kick", "set-topic", "set-purpose", "mark", "open", "close", "unreads", "export"],
       "methods": {
         "list": "conversations.list", "info": "conversations.info", "history": "conversations.history",
         "replies": "conversations.replies", "members": "conversations.members", "create": "conversations.create",
@@ -20,19 +20,21 @@
         "invite": "conversations.invite", "join": "conversations.join", "leave": "conversations.leave",
         "kick": "conversations.kick", "set-topic": "conversations.setTopic", "set-purpose": "conversations.setPurpose",
         "mark": "conversations.mark", "open": "conversations.open", "close": "conversations.close",
-        "unreads": "composite(users.conversations + conversations.info)"
+        "unreads": "composite(users.conversations + conversations.info)",
+        "export": "composite(conversations.history + conversations.replies → JSONL)"
       },
       "key_fields": ["id", "name", "is_private", "num_members"]
     },
     {
       "name": "msg",
       "aliases": ["chat", "message"],
-      "verbs": ["post", "update", "delete", "ephemeral", "me", "permalink", "schedule", "scheduled", "delete-scheduled"],
+      "verbs": ["post", "update", "delete", "ephemeral", "me", "permalink", "schedule", "scheduled", "delete-scheduled", "template"],
       "methods": {
         "post": "chat.postMessage", "update": "chat.update", "delete": "chat.delete",
         "ephemeral": "chat.postEphemeral", "me": "chat.meMessage", "permalink": "chat.getPermalink",
         "schedule": "chat.scheduleMessage", "scheduled": "chat.scheduledMessages.list",
-        "delete-scheduled": "chat.deleteScheduledMessage"
+        "delete-scheduled": "chat.deleteScheduledMessage",
+        "template": "composite(text/template render + chat.postMessage)"
       },
       "key_fields": ["channel", "ts", "text"]
     },
@@ -46,11 +48,12 @@
     {
       "name": "users",
       "aliases": ["user"],
-      "verbs": ["list", "info", "lookup-email", "conversations", "presence", "profile", "search"],
+      "verbs": ["list", "info", "lookup-email", "conversations", "presence", "profile", "search", "set-presence", "set-status"],
       "methods": {
         "list": "users.list", "info": "users.info", "lookup-email": "users.lookupByEmail",
         "conversations": "users.conversations", "presence": "users.getPresence",
-        "profile": "users.profile.get", "search": "composite(users.list + client-side filter)"
+        "profile": "users.profile.get", "search": "composite(users.list + client-side filter)",
+        "set-presence": "users.setPresence", "set-status": "users.profile.set"
       },
       "key_fields": ["id", "name", "real_name", "is_bot"]
     },
@@ -101,6 +104,53 @@
       "methods": { "info": "team.info", "profile": "team.profile.get" },
       "read_only": true,
       "key_fields": ["id", "name", "domain"]
+    },
+    {
+      "name": "files",
+      "aliases": ["file"],
+      "verbs": ["list", "info", "delete", "upload", "download"],
+      "methods": {
+        "list": "files.list", "info": "files.info", "delete": "files.delete",
+        "upload": "composite(files.getUploadURLExternal + POST + files.completeUploadExternal)",
+        "download": "composite(files.info + authed GET of url_private)"
+      },
+      "key_fields": ["id", "name", "filetype", "size"]
+    },
+    {
+      "name": "dnd",
+      "verbs": ["info", "set-snooze", "end-snooze", "end-dnd", "team-info"],
+      "methods": {
+        "info": "dnd.info", "set-snooze": "dnd.setSnooze", "end-snooze": "dnd.endSnooze",
+        "end-dnd": "dnd.endDnd", "team-info": "dnd.teamInfo"
+      },
+      "key_fields": ["dnd_enabled", "next_dnd_start_ts", "next_dnd_end_ts"]
+    },
+    {
+      "name": "bookmarks",
+      "aliases": ["bookmark"],
+      "verbs": ["list", "add", "edit", "remove"],
+      "methods": {
+        "list": "bookmarks.list", "add": "bookmarks.add", "edit": "bookmarks.edit", "remove": "bookmarks.remove"
+      },
+      "key_fields": ["id", "title", "link", "type"]
+    },
+    {
+      "name": "assistant",
+      "verbs": ["search-context"],
+      "methods": { "search-context": "assistant.search.context" },
+      "note": "bot-token search (unlike search.*, which is user-token-only)",
+      "key_fields": ["ts", "channel_id", "message"]
+    },
+    {
+      "name": "canvases",
+      "aliases": ["canvas"],
+      "verbs": ["create", "edit", "delete", "access-set", "access-delete", "sections-lookup"],
+      "methods": {
+        "create": "canvases.create", "edit": "canvases.edit", "delete": "canvases.delete",
+        "access-set": "canvases.access.set", "access-delete": "canvases.access.delete",
+        "sections-lookup": "canvases.sections.lookup"
+      },
+      "key_fields": ["canvas_id"]
     }
   ],
   "methods": [

@@ -67,9 +67,11 @@ func NewRootCmd() *cobra.Command {
 // first-party tool instead of one flat alphabetical list.
 var commandGroups = map[string]string{
 	"conversations": "conversations", "msg": "conversations", "search": "conversations",
-	"listen": "conversations",
-	"users":  "directory", "usergroups": "directory", "team": "directory",
-	"reactions": "messages", "pins": "messages", "saved": "messages", "emoji": "messages",
+	"assistant": "conversations", "listen": "conversations",
+	"files": "conversations", "canvases": "conversations",
+	"users": "directory", "usergroups": "directory", "team": "directory", "dnd": "directory",
+	"reactions": "messages", "pins": "messages", "bookmarks": "messages",
+	"saved": "messages", "emoji": "messages",
 	"auth": "meta", "config": "meta", "init": "meta", "doctor": "meta",
 	"alias": "meta", "api": "meta", "version": "meta", "completion": "meta",
 	"mcp": "agents", "agent": "agents",
@@ -77,8 +79,8 @@ var commandGroups = map[string]string{
 
 func groupCommands(root *cobra.Command) {
 	root.AddGroup(
-		&cobra.Group{ID: "conversations", Title: "Conversations & messaging:"},
-		&cobra.Group{ID: "messages", Title: "Reactions, pins & saved items:"},
+		&cobra.Group{ID: "conversations", Title: "Conversations, messaging & files:"},
+		&cobra.Group{ID: "messages", Title: "Reactions, pins, bookmarks & saved:"},
 		&cobra.Group{ID: "directory", Title: "People & workspace:"},
 		&cobra.Group{ID: "agents", Title: "AI agents:"},
 		&cobra.Group{ID: "meta", Title: "Setup & meta:"},

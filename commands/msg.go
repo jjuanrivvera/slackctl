@@ -1,5 +1,7 @@
 package commands
 
+import "github.com/spf13/cobra"
+
 // The msg group wraps the chat.* family — posting, editing, deleting, and scheduling
 // messages. `msg post --thread-ts` is the thread-reply path (there is no separate method).
 
@@ -123,5 +125,6 @@ Slack recommends keeping --text under 4,000 characters (it truncates at 40,000).
 				},
 			},
 		},
+		Extra: []func() *cobra.Command{msgTemplateCmd},
 	})
 }

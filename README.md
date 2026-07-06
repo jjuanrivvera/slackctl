@@ -96,15 +96,20 @@ A profile is a workspace. `--workspace acme` (env `SLACKCTL_WORKSPACE`) selects 
 ```text
 conversations  list · info · history · replies · members · create · rename · archive ·
                unarchive · invite · join · leave · kick · set-topic · set-purpose ·
-               mark · open · close · unreads          (aliases: conv, channels)
+               mark · open · close · unreads · export   (aliases: conv, channels)
 msg            post · update · delete · ephemeral · me · permalink · schedule ·
-               scheduled · delete-scheduled           (aliases: chat, message)
-search         messages · files · all                 (user token)
-users          list · info · lookup-email · conversations · presence · profile · search
+               scheduled · delete-scheduled · template  (aliases: chat, message)
+search         messages · files · all                   (user token)
+assistant      search-context                           (bot-token search)
+files          list · info · delete · upload · download (aliases: file)
+canvases       create · edit · delete · access-set · access-delete · sections-lookup
+users          list · info · lookup-email · conversations · presence · profile · search ·
+               set-presence · set-status                (aliases: user)
 usergroups     list · create · update · enable · disable · members · members-update
+dnd            info · set-snooze · end-snooze · end-dnd · team-info
 reactions      add · remove · get · list
-saved          list · add · remove                    (stars API; user token)
-pins           list · add · remove
+pins           list · add · remove       bookmarks   list · add · edit · remove
+saved          list · add · remove                      (stars API; user token)
 emoji          list          team    info · profile
 listen         live event stream: Socket Mode (app token) OR RTM (session/user)
 auth · config · init · doctor · completion · alias · api · version · mcp · agent
@@ -116,9 +121,12 @@ lists, and `--as-user` to run with the stored user token.
 
 ```sh
 slackctl conversations history --channel C0123 --limit 50 -o json
-slackctl users search ada
-slackctl search messages --query "deploy failed in:#eng-alerts" --sort timestamp
-slackctl conversations unreads --as-user --types im
+slackctl conversations export --channel C0123 --threads > history.jsonl   # archive a channel
+slackctl files upload --file report.pdf --channels C0123 --comment "Q3"
+slackctl users set-status --text "In a meeting" --emoji :calendar:
+slackctl dnd set-snooze --minutes 60
+slackctl msg template --channel C0123 --file alert.tmpl --set service=api --set status=down
+slackctl assistant search-context --query "deploy failed"       # search with a bot token
 slackctl api conversations.info -q channel=C0123 --idempotent   # raw escape hatch
 ```
 
@@ -139,6 +147,7 @@ or not you created a Slack app:
 slackctl listen --dms --json                          # auto transport, DM events as NDJSON
 slackctl listen --transport rtm --json                # force RTM (session/user token)
 slackctl listen --dms --channels C0123,C0456 --json   # DMs OR those channels
+slackctl listen --channels C0123 --since 1h --json    # replay the last hour, then go live
 slackctl listen --events message,reaction_added       # filter by event type
 slackctl listen --raw | jq .                           # full wire frames
 ```

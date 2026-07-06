@@ -36,7 +36,8 @@ Classifies every command from the live tree into read / write / irreversible, th
 safety config that:
 
 - **hard-blocks irreversible operations** — `msg delete`, `conversations archive`/`kick`/
-  `leave`, `usergroups disable` — across canonical **and alias** command paths;
+  `leave`, `usergroups disable`, `files delete`, `bookmarks remove`, `canvases delete`/
+  `access-delete` — across canonical **and alias** command paths;
 - **gates ordinary writes** behind approval;
 - **leaves reads free.**
 

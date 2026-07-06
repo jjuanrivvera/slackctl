@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "slackctl-cli",
-  "version": "0.1.0",
-  "description": "Drive the Slack Web API from the terminal: conversations, messages, search, users, usergroups, reactions, saved items, and a Socket Mode event stream.",
+  "version": "0.2.0",
+  "description": "Drive the Slack Web API from the terminal: conversations, messages (post/template/export), search, files, canvases, users & status, usergroups, reactions, pins, bookmarks, saved items, and a live event stream (Socket Mode or RTM).",
   "author": { "name": "jjuanrivvera", "url": "https://github.com/jjuanrivvera" },
   "homepage": "https://github.com/jjuanrivvera/slackctl",
   "repository": "https://github.com/jjuanrivvera/slackctl",

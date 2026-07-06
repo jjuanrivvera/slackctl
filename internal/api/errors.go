@@ -46,8 +46,10 @@ func (e *APIError) Error() string {
 // failures (a proxy 502, a raw 429).
 func (e *APIError) hint() string {
 	switch e.Code {
-	case "not_authed", "invalid_auth", "token_revoked", "token_expired", "account_inactive":
-		return "invalid or missing token — run `slackctl auth login` (create one at https://api.slack.com/apps)"
+	case "token_expired":
+		return "the credential has expired — re-run `slackctl auth login` (browser-session xoxc/xoxd tokens rotate, so `--kind session` needs re-capturing periodically)"
+	case "not_authed", "invalid_auth", "token_revoked", "account_inactive":
+		return "invalid or missing token — run `slackctl auth login` (OAuth tokens at https://api.slack.com/apps, or `--kind session` for a browser session)"
 	case "missing_scope":
 		if e.Needed != "" {
 			return fmt.Sprintf("the token lacks the %q scope — add it under OAuth & Permissions and reinstall the app", e.Needed)
@@ -94,6 +96,10 @@ func (e *APIError) hint() string {
 		return "Slack server error — usually transient; retry shortly"
 	case e.StatusCode == 404:
 		return "endpoint not found — check the method name (`slackctl api <method>`) or your --base-url"
+	case e.StatusCode == 401 || e.StatusCode == 403:
+		// A bare 401/403 with no Slack error code usually comes from a proxy in front of the
+		// API, not Slack itself — but the fix is still credential/permission-shaped.
+		return "unauthorized — check your token/permissions (or a proxy in front of --base-url); run `slackctl auth login`"
 	}
 	return ""
 }

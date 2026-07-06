@@ -61,6 +61,19 @@ slackctl listen --dms --channels C0123 --json          # DMs OR that channel
 slackctl listen --events message,reaction_added        # only these event types
 ```
 
+## Replay history with `--since`
+
+Backfill the recent history of `--channels` before the live stream starts, so you don't miss
+what happened while disconnected. `--since` takes a Slack ts, a unix time, or a duration:
+
+```sh
+slackctl listen --channels C0123 --since 1h --json     # replay the last hour, then go live
+slackctl listen --channels C0123 --since 30m
+```
+
+Backfill only applies to `--channels` (there's no practical way to replay every DM). The
+replayed messages flow through the same filters and output as live events.
+
 ## Output shapes
 
 | Flag | Output |

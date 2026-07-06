@@ -35,4 +35,6 @@ Look up and list workspace users
 * [slackctl users presence](slackctl_users_presence.md)	 - Show a user's presence (active/away)
 * [slackctl users profile](slackctl_users_profile.md)	 - Show a user's profile fields
 * [slackctl users search](slackctl_users_search.md)	 - Find users by name, display name, or email (client-side)
+* [slackctl users set-presence](slackctl_users_set-presence.md)	 - Set your presence (auto or away)
+* [slackctl users set-status](slackctl_users_set-status.md)	 - Set your Slack status (text, emoji, expiry)
 

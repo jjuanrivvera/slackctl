@@ -16,9 +16,12 @@ $ slackctl listen --dms --json | jq -r .text
 ## What it does
 
 - **Conversations & messaging** — list/inspect channels, DMs and threads, read history,
-  post/edit/schedule/delete messages, mark as read.
-- **Search, people & groups** — full-text search, user lookup, usergroup management.
-- **Reactions, pins & saved items.**
+  post/edit/schedule/delete messages, mark as read, export a channel to JSONL, post from a
+  template.
+- **Search, people & groups** — full-text search (user or bot token), user lookup, set your
+  status/presence/DND, usergroup management.
+- **Files, canvases, reactions, pins, bookmarks & saved items** — upload/download files,
+  create canvases, and the usual channel adornments.
 - **A live event stream** (`slackctl listen`) over **Socket Mode** *or* **RTM**, auto-selected
   by the credential you have.
 - **Structured output** — table / json / yaml / csv, `--columns`, a built-in `--jq` filter,

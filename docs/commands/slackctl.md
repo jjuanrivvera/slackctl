@@ -44,12 +44,17 @@ Every command honors --dry-run (prints the equivalent curl), -o/--output, and --
 * [slackctl agent](slackctl_agent.md)	 - AI-agent integration helpers
 * [slackctl alias](slackctl_alias.md)	 - Manage user-defined command aliases
 * [slackctl api](slackctl_api.md)	 - Call any Web API method directly (raw escape hatch)
+* [slackctl assistant](slackctl_assistant.md)	 - Assistant APIs (bot-token search)
 * [slackctl auth](slackctl_auth.md)	 - Manage Slack tokens and verify authentication
+* [slackctl bookmarks](slackctl_bookmarks.md)	 - Manage a channel's bookmarks
+* [slackctl canvases](slackctl_canvases.md)	 - Create and manage Canvases
 * [slackctl completion](slackctl_completion.md)	 - Generate a shell completion script
 * [slackctl config](slackctl_config.md)	 - Inspect and edit slackctl configuration
 * [slackctl conversations](slackctl_conversations.md)	 - Manage channels, DMs, and group conversations
+* [slackctl dnd](slackctl_dnd.md)	 - Do Not Disturb — snooze and status
 * [slackctl doctor](slackctl_doctor.md)	 - Diagnose configuration, credentials, and connectivity
 * [slackctl emoji](slackctl_emoji.md)	 - Custom emoji
+* [slackctl files](slackctl_files.md)	 - Upload, download, and manage files
 * [slackctl init](slackctl_init.md)	 - First-run wizard: capture tokens, verify, and save a workspace profile
 * [slackctl listen](slackctl_listen.md)	 - Stream events live (Socket Mode or RTM) as lines
 * [slackctl mcp](slackctl_mcp.md)	 - MCP server management

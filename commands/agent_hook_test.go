@@ -122,6 +122,15 @@ func TestHookScript_BashExecution(t *testing.T) {
 		{"other_binary_allowed", bashPayload("myslackctl msg delete --channel C1 --ts 1.0"), false},
 		{"other_binary_api_allowed", bashPayload("myslackctl api chat.delete"), false},
 		{"saved_remove_is_write_not_blocked", bashPayload("slackctl saved remove --channel C1 --ts 1.0"), false},
+		// --- new destructive families (v0.2) ---
+		{"files_delete_denied", bashPayload("slackctl files delete --file F1"), true},
+		{"canvases_delete_denied", bashPayload("slackctl canvases delete --canvas F1"), true},
+		{"canvases_access_delete_denied", bashPayload("slackctl canvases access-delete --canvas F1 --users U1"), true},
+		{"bookmarks_remove_denied", bashPayload("slackctl bookmarks remove --channel C1 --bookmark Bk1"), true},
+		{"api_files_delete_denied", bashPayload("slackctl api files.delete -q file=F1"), true},
+		{"api_dnd_teaminfo_allowed", bashPayload("slackctl api dnd.teamInfo"), false},
+		{"api_assistant_context_allowed", bashPayload("slackctl api assistant.search.context -q query=x"), false},
+		{"api_canvases_lookup_allowed", bashPayload("slackctl api canvases.sections.lookup -q canvas_id=F1"), false},
 		// --- MCP branch ---
 		{"mcp_msg_delete_denied", mcpPayload("mcp__slackctl__slack_msg_delete"), true},
 		{"mcp_conversations_archive_denied", mcpPayload("mcp__slackctl__slack_conversations_archive"), true},

@@ -36,5 +36,6 @@ Post, edit, delete, and schedule messages
 * [slackctl msg post](slackctl_msg_post.md)	 - Post a message to a conversation
 * [slackctl msg schedule](slackctl_msg_schedule.md)	 - Schedule a message for later
 * [slackctl msg scheduled](slackctl_msg_scheduled.md)	 - List scheduled messages
+* [slackctl msg template](slackctl_msg_template.md)	 - Render a template file and post it
 * [slackctl msg update](slackctl_msg_update.md)	 - Edit an existing message
 

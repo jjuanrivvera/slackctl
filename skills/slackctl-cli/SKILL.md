@@ -1,7 +1,7 @@
 ---
 name: slackctl-cli
-description: Operate Slack from the terminal with the `slackctl` CLI — list/read/manage conversations, post/edit/schedule messages, search (user token), users & usergroups, reactions, pins, saved items, and stream events live over Socket Mode with `slackctl listen`. Use whenever the user wants to read or send Slack messages, inspect channels/DMs/threads, check unreads, react/pin/save, look up users, manage @mention groups, or watch Slack events from a script. Prefer it over raw curl to the Slack Web API.
-version: 0.1.0
+description: Operate Slack from the terminal with the `slackctl` CLI — list/read/manage conversations, post/edit/schedule/template messages, export a channel to JSONL, search (user or bot token), users & usergroups, set your status/presence/DND, upload/download files, canvases, reactions, pins, bookmarks, saved items, and stream events live (Socket Mode or RTM) with `slackctl listen`. Use whenever the user wants to read or send Slack messages, inspect channels/DMs/threads, check unreads, upload/download files, react/pin/bookmark/save, look up users, set a Slack status, manage @mention groups, or watch/replay Slack events from a script. Prefer it over raw curl to the Slack Web API.
+version: 0.2.0
 homepage: https://github.com/jjuanrivvera/slackctl
 license: MIT
 allowed-tools: Bash(slackctl:*)
@@ -35,7 +35,7 @@ consistent output. `--dry-run` prints the exact curl when you need to inspect a 
 1. **Discover before acting**: resolve channel ids with `conversations list` / `users
    search` — never guess a `C…`/`U…`/`D…` id.
 2. **Destructive ops need explicit human intent**: `msg delete`, `conversations
-   archive|kick|leave`, `usergroups disable`. Never run them speculatively.
+   archive|kick|leave`, `usergroups disable`, `files delete`, `bookmarks remove`, `canvases delete`. Never run them speculatively.
 3. Use `-o json` + `--jq` for parsing; keep `table` only for human display.
 4. Paginated lists default to 100 items — pass `--all` when completeness matters.
 5. Posting: keep `--text` under 4,000 chars; reply in threads with `--thread-ts`.
@@ -64,21 +64,33 @@ slackctl msg post --channel C0123 --text "deploy done ✅"
 slackctl msg post --channel C0123 --thread-ts 1720000000.000100 --text "in thread"
 slackctl msg update --channel C0123 --ts 1720000000.000200 --text "fixed"
 slackctl msg schedule --channel C0123 --post-at 1735689600 --text "future"
+slackctl msg template --channel C0123 --file alert.tmpl --set service=api --set status=down
 
-# Search (user token) / users / groups
-slackctl search messages --query "incident in:#eng-alerts" --sort timestamp
-slackctl users search ada            # client-side filter of users.list
+# Export / archive a channel to JSONL
+slackctl conversations export --channel C0123 --threads > history.jsonl
+
+# Search / users / status / groups
+slackctl search messages --query "incident in:#eng-alerts" --sort timestamp   # user token
+slackctl assistant search-context --query "incident"    # bot token OK
 slackctl users lookup-email --email ada@example.com
+slackctl users set-status --text "In a meeting" --emoji :calendar:            # user token
+slackctl dnd set-snooze --minutes 60                                          # user token
 slackctl usergroups members --usergroup S0123 -o id
 
-# Reactions / pins / saved
+# Files / canvases
+slackctl files upload --file report.pdf --channels C0123 --comment "Q3"
+slackctl files download --file F0123 --out ./report.pdf
+slackctl canvases create --title Runbook --content '{"type":"markdown","markdown":"# Runbook"}'
+
+# Reactions / pins / bookmarks / saved
 slackctl reactions add --channel C0123 --ts 1720000000.000100 --name thumbsup
 slackctl pins add --channel C0123 --ts 1720000000.000100
+slackctl bookmarks add --channel C0123 --title Runbook --link https://wiki/runbook
 slackctl saved list                  # user token; legacy stars API
 
 # Live events (auto transport: Socket Mode with app token, else RTM with user/session)
 slackctl listen --dms --json | jq -r '.text'
-slackctl listen --transport rtm --channels C0123 --events message,reaction_added --json
+slackctl listen --channels C0123 --since 1h --json     # replay recent history, then go live
 
 # Escape hatch for unwrapped methods
 slackctl api conversations.info -q channel=C0123 --idempotent

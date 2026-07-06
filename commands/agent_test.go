@@ -64,7 +64,7 @@ func readShapedMethod(method string) bool {
 	}
 	switch strings.ToLower(seg) {
 	case "list", "info", "test", "history", "replies", "members", "messages",
-		"files", "all", "lookupbyemail", "conversations":
+		"files", "all", "lookupbyemail", "conversations", "teaminfo", "context", "lookup":
 		return true
 	}
 	return false

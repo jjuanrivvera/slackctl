@@ -312,6 +312,7 @@ func TestTokenAuth_MethodAndRedaction(t *testing.T) {
 func TestAPIError_HintsAreActionable(t *testing.T) {
 	cases := map[string]string{
 		"invalid_auth":                          "auth login",
+		"token_expired":                         "--kind session",
 		"missing_scope":                         "OAuth & Permissions",
 		"not_allowed_token_type":                "--kind user",
 		"channel_not_found":                     "conversations list",
@@ -330,6 +331,7 @@ func TestAPIError_HintsAreActionable(t *testing.T) {
 	assert.Contains(t, (&APIError{StatusCode: 502, Method: "m"}).Error(), "transient")
 	assert.Contains(t, (&APIError{StatusCode: 429, Method: "m"}).Error(), "rate limited")
 	assert.Contains(t, (&APIError{StatusCode: 404, Method: "m"}).Error(), "base-url")
+	assert.Contains(t, (&APIError{StatusCode: 403, Method: "m"}).Error(), "unauthorized")
 }
 
 func TestAPIError_RetryAfterInHint(t *testing.T) {
