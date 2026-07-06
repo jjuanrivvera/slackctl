@@ -1,38 +1,53 @@
 # slackctl
 
-A fast, scriptable command-line tool for the [Slack Web API](https://docs.slack.dev/apis/web-api/).
+A fast, scriptable command-line tool for the [Slack Web API](https://docs.slack.dev/apis/web-api/)
+— `gh`-style ergonomics, structured output, and a live event stream.
 
-- Conversations, messages, search, users, usergroups, reactions, pins, saved items.
-- A live event stream (`slackctl listen`) over **Socket Mode** *or* **RTM** — auto-selected
+```console
+$ slackctl conversations list
+ID           NAME        IS_PRIVATE  IS_ARCHIVED  NUM_MEMBERS
+C0123ABCD    general     false       false        42
+C0456EFGH    eng-alerts  false       false        17
+
+$ slackctl msg post --channel C0456EFGH --text "deploy finished ✅"
+$ slackctl listen --dms --json | jq -r .text
+```
+
+## What it does
+
+- **Conversations & messaging** — list/inspect channels, DMs and threads, read history,
+  post/edit/schedule/delete messages, mark as read.
+- **Search, people & groups** — full-text search, user lookup, usergroup management.
+- **Reactions, pins & saved items.**
+- **A live event stream** (`slackctl listen`) over **Socket Mode** *or* **RTM**, auto-selected
   by the credential you have.
-- table / json / yaml / csv output, `--columns`, and a built-in `--jq` filter.
-- OS-keyring token storage, named profiles for multiple workspaces.
-- An MCP server and an `agent guard` so AI agents can drive Slack safely.
+- **Structured output** — table / json / yaml / csv, `--columns`, a built-in `--jq` filter,
+  and cursor pagination (`--all`).
+- **Safe by design** — tokens in the OS keyring, `--dry-run` prints the exact `curl`, an MCP
+  server and an `agent guard` so AI agents can drive Slack without touching the dangerous verbs.
 
-## Get started
+## Install
 
 ```sh
 go install github.com/jjuanrivvera/slackctl/cmd/slackctl@latest
-slackctl auth login          # store a bot token (or --kind session for xoxc/xoxd)
-slackctl auth status
+# or: brew install jjuanrivvera/slackctl/slackctl-cli
+```
+
+## First steps
+
+```sh
+slackctl auth login          # store a bot token — or --kind session for xoxc/xoxd
+slackctl auth status         # who am I?
 slackctl conversations list
 slackctl msg post --channel C0123456 --text "hello from slackctl"
 ```
 
-## No Slack app? Use your browser session
+## Where to next
 
-If you already drive Slack with `slack-mcp-server` (a browser `xoxc` token + `xoxd` cookie),
-point slackctl at the same credentials — no app to create:
-
-```sh
-slackctl auth login --kind session      # paste the xoxc token, then the xoxd cookie
-slackctl listen --dms --json            # streams over RTM (no app needed)
-```
-
-Session credentials carry your own identity, so they back bot- and user-kind commands
-(search and saved items included). The one thing they can't do is Socket Mode; `listen`
-uses RTM instead.
-
-See the full [command reference](commands/slackctl.md), or the
-[README](https://github.com/jjuanrivvera/slackctl#readme) for installation options and the
-RTM caveat.
+- **[Getting started](getting-started.md)** — install, authenticate, first commands.
+- **[Authentication & tokens](authentication.md)** — bot/user/app/session tokens, workspaces,
+  the keyring, and driving slackctl with a browser session (no Slack app).
+- **[Output & filtering](output.md)** — formats, `--columns`, `--jq`, pagination.
+- **[The `listen` command](listen.md)** — live event streaming over Socket Mode or RTM.
+- **[AI agents](agents.md)** — the MCP server and the agent guard.
+- **[Command reference](commands/slackctl.md)** — every command and flag.

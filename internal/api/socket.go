@@ -38,7 +38,7 @@ func (c *Client) OpenSocketURL(ctx context.Context) (string, error) {
 }
 
 // OpenRTMURL asks rtm.connect for a fresh Real Time Messaging wss:// URL. RTM works with a
-// user/session token (xoxc+xoxd) — the credential a slack-mcp-style setup already has — so it
+// user/session token (xoxc+xoxd) — a browser web-client credential — so it
 // backs `slackctl listen` when no app-level token is available. RTM is a legacy API and is
 // not officially supported for xoxc tokens; a workspace may return method_deprecated or
 // not_allowed_token_type, which the caller surfaces with its hint. URLs are single-use and

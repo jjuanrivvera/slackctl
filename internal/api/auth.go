@@ -9,8 +9,8 @@ import (
 // Authenticator applies a credential to an outgoing Web API request. Slack has one primary
 // wire scheme (an `Authorization: Bearer` header) carried by several token kinds — bot
 // (xoxb-), user (xoxp-), app-level (xapp-, Socket Mode only) — plus the browser-session
-// scheme (xoxc- bearer + a `Cookie: d=xoxd-…` header) that tools like slack-mcp-server
-// use. We keep the interface from the cliwright standard so redaction lives in one place
+// scheme (an xoxc- bearer token + a `Cookie: d=xoxd-…` header) that Slack's own web
+// client uses. We keep the interface from the cliwright standard so redaction lives in one place
 // and the design scales across kinds (GOAL.md §1 "auth providers").
 type Authenticator interface {
 	// Apply sets the credential on the request.
@@ -74,7 +74,7 @@ func (a *TokenAuth) Method() string {
 
 // SessionAuth authenticates as a real Slack user with browser-session credentials: an
 // xoxc- token in the Authorization header plus the paired xoxd- cookie. This is the
-// scheme slack-mcp-server uses; an xoxc token WITHOUT its cookie is rejected by Slack
+// scheme Slack's web client uses; an xoxc token WITHOUT its cookie is rejected by Slack
 // with invalid_auth. It carries the user's own identity, so it satisfies user-token-only
 // methods (search.*, stars.*) too.
 type SessionAuth struct {

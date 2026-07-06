@@ -42,7 +42,7 @@ Token kinds:
   bot      xoxb-…            OAuth bot token (default; from OAuth & Permissions)
   user     xoxp-…            OAuth user token (search, saved items)
   app      xapp-…            app-level token for 'slackctl listen' (Socket Mode)
-  session  xoxc-… + xoxd-…   browser-session pair — the scheme slack-mcp-server uses;
+  session  xoxc-… + xoxd-…   browser web-client pair (xoxc token + xoxd cookie);
                              no app needed. Acts as your user identity, so it backs
                              bot- and user-kind commands too.`,
 		Example: `  slackctl auth login                          # prompt for the bot token (hidden input)

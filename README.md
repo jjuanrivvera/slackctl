@@ -40,12 +40,13 @@ slackctl talks to Slack as a **Slack app**. Create one at <https://api.slack.com
 | Bot `xoxb-…` | OAuth & Permissions → Bot User OAuth Token | almost everything (default) |
 | User `xoxp-…` | OAuth & Permissions → User OAuth Token | `search`, `saved` (user-only methods), `--as-user`, `listen` via RTM |
 | App-level `xapp-…` | Basic Information → App-Level Tokens (scope `connections:write`) | `slackctl listen` via Socket Mode |
-| Session `xoxc-…` + `xoxd-…` | your browser session (the scheme `slack-mcp-server` uses) | **everything except Socket Mode** — no Slack app needed; `listen` runs over RTM |
+| Session `xoxc-…` + `xoxd-…` | your Slack web-client session (browser token + `d` cookie) | **everything except Socket Mode** — no Slack app needed; `listen` runs over RTM |
 
-### No Slack app? Use your browser session (like the Slack MCP)
+### No Slack app? Use your browser session
 
-If you already drive Slack with `slack-mcp-server` (which authenticates with a browser
-`xoxc` token + `xoxd` cookie), point slackctl at the same credentials — no app to create:
+If you have a Slack **web-client session** — an `xoxc` token plus the paired `xoxd` cookie
+(the credentials your browser uses) — slackctl can authenticate with it directly, no app to
+create:
 
 ```sh
 slackctl auth login --kind session      # paste the xoxc token, then the xoxd cookie
@@ -129,7 +130,7 @@ or not you created a Slack app:
 
 | Transport | Needs | Notes |
 |---|---|---|
-| **RTM** (`--transport rtm`) | user token (`xoxp-`) or the session pair (`xoxc-`+`xoxd-`) | No Slack app required — streams with the same creds a slack-mcp setup uses. Legacy/unofficial for `xoxc`; a workspace may block it. |
+| **RTM** (`--transport rtm`) | user token (`xoxp-`) or the session pair (`xoxc-`+`xoxd-`) | No Slack app required — streams with a browser web-client session. Legacy/unofficial for `xoxc`; a workspace may block it. |
 | **Socket Mode** (`--transport socket`) | app-level token (`xapp-`, `connections:write`) + Socket Mode enabled + event subscriptions | Official and robust. Only delivers subscribed events for conversations the bot is in. |
 
 `--transport auto` (default) picks Socket Mode when an app token is present, else RTM.

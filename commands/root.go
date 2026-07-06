@@ -125,7 +125,7 @@ func clientFromCmd(cmd *cobra.Command) (*api.Client, error) {
 // precedence per kind: $SLACKCTL_TOKEN (explicit override, any kind) > the kind's
 // conventional env var (SLACK_BOT_TOKEN / SLACK_USER_TOKEN / SLACK_APP_TOKEN /
 // SLACK_XOXC_TOKEN+SLACK_XOXD_TOKEN) > the profile's keyring entry, then — for bot/user
-// kinds — a browser-session (xoxc+xoxd) fallback so a slack-mcp-style setup with no OAuth
+// kinds — a browser-session (xoxc+xoxd) fallback so a web-client credential with no OAuth
 // token still works.
 func clientForKind(cmd *cobra.Command, kind auth.TokenKind) (*api.Client, error) {
 	f := cmd.Flags()

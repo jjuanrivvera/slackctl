@@ -35,6 +35,6 @@ not just `make check`.
 - Pin every ambiguous API assumption in `DECISIONS.md`; read it back, never silently
   re-decide.
 - The resource set is derived from the enumerated Web API surface (`api-manifest.json`), not
-  hand-picked; the deliberate scope (MCP parity + listen) is a recorded coverage-waiver.
+  hand-picked; the deliberate scope (core messaging/read surface + listen) is a recorded coverage-waiver.
 - Success/failure is Slack's `ok` field, never the HTTP status; error hints key off Slack's
   string error codes (see `internal/api/errors.go`).

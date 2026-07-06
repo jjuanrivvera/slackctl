@@ -5,10 +5,10 @@ pass and never silently re-decides.
 
 ## Scope & completeness
 
-- **Surface scope** → Slack-MCP feature parity (conversations list/history/replies/search/
+- **Surface scope** → the core messaging/read/people surface (conversations list/history/replies/search/
   unreads/post/mark, channels, users search/info, usergroups, reactions, saved items) plus a
-  hand-written Socket Mode `listen` — per the commissioning brief, not the full 308-method API.
-- coverage-waiver: the surface is user-scoped to Slack-MCP parity + `listen` (60 of the 308
+  hand-written `listen` event stream — a focused surface, not the full 308-method API.
+- coverage-waiver: the surface is scoped to the core messaging/read surface + `listen` (60 of the 308
   enumerated methods, 19%). Of the remainder: admin.* (106) is Enterprise-Grid-admin-only,
   files.upload is sunset (Nov 2025) and the external-upload flow is out of scope, rtm.*/dialog.*/
   reminders.*/users.setActive are deprecated or retired, and views/workflows/functions/canvases/
@@ -56,11 +56,11 @@ pass and never silently re-decides.
   `<profile>`, `<profile>#user`, `<profile>#app`, `<profile>#session` ('#' is banned in
   profile names so the suffix cannot collide). The session entry is one JSON blob
   (`{"xoxc":…,"xoxd":…}`) so the pair can never be half-written.
-- **Session (browser) auth** → the scheme `slack-mcp-server` uses: an `xoxc-` bearer token
+- **Session (browser) auth** → the scheme Slack's own web client uses: an `xoxc-` bearer token
   plus the paired `xoxd-` "d" cookie sent as `Cookie: d=<xoxd>`. It requires no created
   Slack app, carries the user's own identity, and so is a valid FALLBACK for bot- and
   user-kind commands (search/saved included) when no OAuth token is stored — this is the
-  "drive slackctl exactly like the Slack MCP" path. It does NOT back the app kind:
+  "drive slackctl with a browser session, no app" path. It does NOT back the app kind:
   `apps.connections.open` (Socket Mode / `listen`) genuinely needs an app-level xapp token.
   The xoxd value is sent verbatim (browsers store it already URL-encoded; re-encoding
   breaks the session). Auth precedence per kind: `$SLACKCTL_TOKEN`/kind env var >
@@ -105,7 +105,7 @@ pass and never silently re-decides.
     robust, envelope + 3s ack. Auto picks this when an app token is resolvable.
   - **rtm** — the legacy Real Time Messaging WebSocket (`rtm.connect`), which accepts a
     user/session token (xoxp or the xoxc+xoxd browser pair). This is the "stream with the
-    same creds a slack-mcp setup already has" path — no Slack app needed. Auto picks this
+    same creds a browser session already has" path — no Slack app needed. Auto picks this
     when there's no app token. RTM frames ARE the event objects (no envelope, no ack); the
     client keeps the socket alive with a 30s app-level ping and reconnects with a fresh URL.
   - Both feed one shared filter/render path (`internal/slackevent.Meta`), so `--dms`/

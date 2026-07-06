@@ -17,9 +17,9 @@ metadata: {"openclaw":{"category":"messaging","emoji":"💬","requires":{"bins":
   runs `slackctl init` (tokens go to the OS keyring; `SLACK_BOT_TOKEN` also works).
 - `search` and `saved` need **user-grade** creds — a user token (`auth login --kind user`)
   or a browser-session pair.
-- No Slack app? A **browser-session** pair works for everything except Socket Mode:
-  `auth login --kind session` (xoxc token + xoxd cookie), or `SLACK_XOXC_TOKEN` +
-  `SLACK_XOXD_TOKEN`. This is the same scheme `slack-mcp-server` uses.
+- No Slack app? A **browser web-client session** pair works for everything except Socket
+  Mode: `auth login --kind session` (xoxc token + xoxd cookie), or `SLACK_XOXC_TOKEN` +
+  `SLACK_XOXD_TOKEN`.
 - `listen` picks its transport automatically: **Socket Mode** with an app-level token
   (`auth login --kind app`), else **RTM** with a user/session token (legacy but needs no
   app). Force with `--transport socket|rtm`.

@@ -1,6 +1,6 @@
 // Package rtm is a hand-written client for Slack's legacy Real Time Messaging API — the
 // WebSocket stream that works with a user/session token (xoxc+xoxd), the credential a
-// slack-mcp-style setup already has. Unlike Socket Mode (which needs an app-level token and
+// browser web-client session already has. Unlike Socket Mode (which needs an app-level token and
 // acks enveloped work items), RTM delivers raw event objects and requires no ack; the client
 // just reads frames and keeps the socket alive with periodic pings. RTM is legacy and not
 // officially supported for xoxc tokens — see DECISIONS.md ("listen transports").

@@ -13,7 +13,7 @@ const (
 	KindUser TokenKind = "user"
 	KindApp  TokenKind = "app"
 	// KindSession is a browser-session pair (xoxc token + xoxd cookie) — the scheme
-	// slack-mcp-server uses. Stored as one JSON keyring entry; acts as the user's own
+	// Slack's web client uses. Stored as one JSON keyring entry; acts as the user's own
 	// identity, so it backs both bot- and user-kind commands when no OAuth token exists.
 	KindSession TokenKind = "session"
 )

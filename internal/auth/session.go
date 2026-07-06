@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// SessionCreds is a browser-session credential pair (the scheme slack-mcp-server uses):
+// SessionCreds is a browser web-client credential pair (the scheme Slack's web client uses):
 // the xoxc- token plus the paired xoxd- "d" cookie. Both are required — an xoxc token
 // without its cookie is rejected by Slack. It is stored as one JSON keyring entry under the
 // session key so the pair can never be half-written.

@@ -10,7 +10,7 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-// TestSessionEnv_BacksBotCommands is the "test it like the Slack MCP" path: with only
+// TestSessionEnv_BacksBotCommands is the browser-session path: with only
 // SLACK_XOXC_TOKEN + SLACK_XOXD_TOKEN set (no bot token anywhere), a plain bot-kind
 // command must authenticate via the session pair.
 func TestSessionEnv_BacksBotCommands(t *testing.T) {

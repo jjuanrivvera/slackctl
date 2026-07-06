@@ -11,9 +11,9 @@ Two transports, auto-selected by the credential you have (--transport to force):
   socket  Socket Mode — needs an app-level token (xapp-, connections:write). Official,
           robust, acks enveloped events. Store one with 'slackctl auth login --kind app'.
   rtm     Real Time Messaging — the legacy WebSocket that works with a user/session token
-          (xoxp- or the xoxc+xoxd browser pair). No Slack app required: this is the path
-          that streams with the same credentials a slack-mcp setup already uses. RTM is
-          legacy and unofficial for xoxc tokens — a workspace may block it.
+          (xoxp- or the xoxc+xoxd browser pair). No Slack app required — it streams with a
+          browser web-client session. RTM is legacy and unofficial for xoxc tokens, so a
+          workspace may block it.
 
 Filters combine as a union: --dms OR --channels; --events then narrows by event type.
 With no filters, every received event streams. (Socket Mode only delivers events your app
