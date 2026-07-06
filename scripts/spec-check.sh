@@ -9,7 +9,8 @@ MANIFEST="${1:-api-manifest.json}"
 [[ -f "$MANIFEST" ]] || { echo "✗ $MANIFEST missing — §11 requires a checked-in spec-derived manifest"; exit 1; }
 BIN="$(jq -r '.binary // "slackctl"' "$MANIFEST")"
 BIN_PATH="bin/$BIN"
-[[ -x "$BIN_PATH" ]] || make build >/dev/null 2>&1 || { echo "✗ cannot build $BIN for the surface check"; exit 1; }
+# ALWAYS rebuild: a stale bin/ would let the check pass against an outdated surface.
+make build >/dev/null 2>&1 || { echo "✗ cannot build $BIN for the surface check"; exit 1; }
 
 fail=0
 # Every resource AND each of its declared verbs must be a reachable command — not just the
