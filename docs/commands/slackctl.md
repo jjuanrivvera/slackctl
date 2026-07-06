@@ -51,7 +51,7 @@ Every command honors --dry-run (prints the equivalent curl), -o/--output, and --
 * [slackctl doctor](slackctl_doctor.md)	 - Diagnose configuration, credentials, and connectivity
 * [slackctl emoji](slackctl_emoji.md)	 - Custom emoji
 * [slackctl init](slackctl_init.md)	 - First-run wizard: capture tokens, verify, and save a workspace profile
-* [slackctl listen](slackctl_listen.md)	 - Stream events over Socket Mode (DMs, channels) as lines
+* [slackctl listen](slackctl_listen.md)	 - Stream events live (Socket Mode or RTM) as lines
 * [slackctl mcp](slackctl_mcp.md)	 - MCP server management
 * [slackctl msg](slackctl_msg.md)	 - Post, edit, delete, and schedule messages
 * [slackctl pins](slackctl_pins.md)	 - Pin and unpin messages in a channel

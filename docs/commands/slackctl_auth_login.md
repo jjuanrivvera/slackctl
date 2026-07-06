@@ -4,8 +4,16 @@ Store a Slack token and verify it
 
 ### Synopsis
 
-Capture a token from your Slack app (https://api.slack.com/apps → OAuth & Permissions),
-verify it against auth.test, and save it to the keyring for the active workspace profile.
+Capture a credential and save it to the keyring for the active workspace profile,
+verifying it against auth.test first (except app-level tokens, which can't call it).
+
+Token kinds:
+  bot      xoxb-…            OAuth bot token (default; from OAuth & Permissions)
+  user     xoxp-…            OAuth user token (search, saved items)
+  app      xapp-…            app-level token for 'slackctl listen' (Socket Mode)
+  session  xoxc-… + xoxd-…   browser-session pair — the scheme slack-mcp-server uses;
+                             no app needed. Acts as your user identity, so it backs
+                             bot- and user-kind commands too.
 
 ```
 slackctl auth login [flags]
@@ -18,16 +26,18 @@ slackctl auth login [flags]
   slackctl auth login --token xoxb-...         # non-interactive
   slackctl auth login --kind user              # store a user token (search, saved items)
   slackctl auth login --kind app               # store an app-level token (slackctl listen)
+  slackctl auth login --kind session           # store an xoxc token + xoxd cookie
   slackctl auth login --workspace acme         # store under a named workspace profile
 ```
 
 ### Options
 
 ```
-  -h, --help           help for login
-      --kind string    token kind: bot|user|app (default "bot")
-      --no-verify      skip the auth.test verification call
-      --token string   Slack token (omit to be prompted with hidden input)
+      --cookie string   xoxd cookie value for --kind session (omit to be prompted)
+  -h, --help            help for login
+      --kind string     token kind: bot|user|app|session (default "bot")
+      --no-verify       skip the auth.test verification call
+      --token string    Slack token (omit to be prompted with hidden input)
 ```
 
 ### Options inherited from parent commands
