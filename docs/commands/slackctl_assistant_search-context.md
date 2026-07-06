@@ -28,6 +28,7 @@ slackctl assistant search-context [flags]
       --context-channel-id string   bias results toward this channel
   -h, --help                        help for search-context
       --include-bots                include messages from bots
+      --limit int                   max results to return
       --query string                search query
 ```
 

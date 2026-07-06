@@ -330,7 +330,10 @@ func collectParams(cmd *cobra.Command, mc methodCmd) (map[string]any, error) {
 		switch fs.Kind {
 		case flagString:
 			v, _ := f.GetString(fs.Name)
-			if v != "" {
+			// Send an explicitly-set value even when empty: `set-topic --topic ""` must
+			// send topic="" to CLEAR the topic. Only an unset flag with a non-empty default
+			// falls through to the default (v == default here).
+			if v != "" || f.Changed(fs.Name) {
 				params[fs.param()] = v
 			}
 		case flagInt:

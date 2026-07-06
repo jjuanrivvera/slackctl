@@ -19,6 +19,7 @@ this accepts a bot token, so it works without a user/session credential.`,
 				Columns:   []string{"ts", "channel_id", "author_user_id", "message"},
 				Flags: []flagSpec{
 					{Name: "query", Kind: flagString, Required: true, Usage: "search query"},
+					{Name: "limit", Kind: flagInt, Usage: "max results to return"},
 					{Name: "channel-types", Kind: flagString, Usage: "comma-separated: public_channel,private_channel,mpim,im"},
 					{Name: "content-types", Kind: flagString, Usage: "comma-separated: messages,files"},
 					{Name: "context-channel-id", Kind: flagString, Usage: "bias results toward this channel"},

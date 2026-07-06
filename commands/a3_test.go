@@ -3,6 +3,7 @@ package commands
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,4 +104,32 @@ func TestCanvasCreate_ContentIsJSONObject(t *testing.T) {
 	_, _, err := run(t, srv, "canvases", "create", "--content", `{"type":"markdown","markdown":"# hi"}`)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"type":"markdown","markdown":"# hi"}`, content, "content is sent as a JSON object, not a string")
+}
+
+func TestSetTopic_CanClearWithEmptyString(t *testing.T) {
+	var form url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		form = r.PostForm
+		_, _ = w.Write([]byte(`{"ok":true,"channel":{"id":"C1","topic":{"value":""}}}`))
+	}))
+	t.Cleanup(srv.Close)
+	// An explicitly-empty --topic must send topic="" so the topic is CLEARED, not omitted.
+	_, _, err := run(t, srv, "conversations", "set-topic", "--channel", "C1", "--topic", "", "-o", "json")
+	require.NoError(t, err)
+	_, sent := form["topic"]
+	assert.True(t, sent, "an explicit empty --topic must be sent (to clear), not dropped")
+	assert.Equal(t, "", form.Get("topic"))
+}
+
+func TestAssistantSearch_HasLimitFlag(t *testing.T) {
+	var limit string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit = r.URL.Query().Get("limit")
+		_, _ = w.Write([]byte(`{"ok":true,"results":{"messages":[]}}`))
+	}))
+	t.Cleanup(srv.Close)
+	_, _, err := run(t, srv, "assistant", "search-context", "--query", "x", "--limit", "5")
+	require.NoError(t, err, "the --limit flag referenced in the help must exist")
+	assert.Equal(t, "5", limit)
 }

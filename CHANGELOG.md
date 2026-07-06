@@ -3,6 +3,13 @@
 All notable changes to slackctl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.2.1] - 2026-07-06
+
+### Fixed
+- An explicitly-empty string flag is now sent, so `conversations set-topic --topic ""`
+  (and set-purpose / users set-status) can CLEAR a value instead of silently omitting it.
+- `assistant search-context` gained the `--limit` flag its help already referenced.
+
 ## [0.2.0] - 2026-07-06
 
 ### Added
