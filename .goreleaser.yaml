@@ -43,7 +43,7 @@ dockers:
       - "ghcr.io/jjuanrivvera/slackctl:latest"
     build_flag_templates:
       - "--label=org.opencontainers.image.title=slackctl"
-      - "--label=org.opencontainers.image.description=A fast, scriptable CLI for the Telegram Bot API"
+      - "--label=org.opencontainers.image.description=A fast, scriptable CLI for the Slack Web API"
       - "--label=org.opencontainers.image.source=https://github.com/jjuanrivvera/slackctl"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--label=org.opencontainers.image.licenses=MIT"
