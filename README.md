@@ -1,5 +1,7 @@
 # slackctl
 
+📖 **Docs:** <https://jjuanrivvera.github.io/slackctl/>
+
 A fast, scriptable command-line tool for the **Slack Web API** — `gh`-style ergonomics,
 table/json/yaml/csv output, named profiles for multiple workspaces, OS-keyring token
 storage, a Socket Mode event stream (`slackctl listen`), an MCP server so AI agents can
@@ -103,7 +105,7 @@ reactions      add · remove · get · list
 saved          list · add · remove                    (stars API; user token)
 pins           list · add · remove
 emoji          list          team    info · profile
-listen         Socket Mode event stream (see below)
+listen         live event stream: Socket Mode (app token) OR RTM (session/user)
 auth · config · init · doctor · completion · alias · api · version · mcp · agent
 ```
 
