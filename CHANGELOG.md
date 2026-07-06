@@ -3,7 +3,7 @@
 All notable changes to slackctl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
-## [Unreleased]
+## [0.1.0] - 2026-07-06
 
 ### Added
 - Full Slack Web API command surface: `conversations` (18 verbs incl. composite
