@@ -1,0 +1,25 @@
+site_name: slackctl
+site_description: A fast, scriptable CLI for the Slack Web API
+repo_url: https://github.com/jjuanrivvera/slackctl
+repo_name: jjuanrivvera/slackctl
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      toggle: { icon: material/brightness-7, name: Dark mode }
+    - scheme: slate
+      primary: deep purple
+      toggle: { icon: material/brightness-4, name: Light mode }
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables
+nav:
+  - Home: index.md
+  - Command reference: commands/slackctl.md
