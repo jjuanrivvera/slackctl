@@ -68,7 +68,7 @@ func NewRootCmd() *cobra.Command {
 var commandGroups = map[string]string{
 	"conversations": "conversations", "msg": "conversations", "search": "conversations",
 	"listen": "conversations",
-	"users": "directory", "usergroups": "directory", "team": "directory",
+	"users":  "directory", "usergroups": "directory", "team": "directory",
 	"reactions": "messages", "pins": "messages", "saved": "messages", "emoji": "messages",
 	"auth": "meta", "config": "meta", "init": "meta", "doctor": "meta",
 	"alias": "meta", "api": "meta", "version": "meta", "completion": "meta",

@@ -3,6 +3,7 @@ module github.com/jjuanrivvera/slackctl
 go 1.25.0
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/itchyny/gojq v0.12.19
 	github.com/njayp/ophis v1.1.4

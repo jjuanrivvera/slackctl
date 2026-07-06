@@ -258,19 +258,24 @@ func pageSize(max int) int {
 }
 
 // extractField pulls one named field out of a response body, so tables show the payload
-// (the channel, the message list) instead of Slack's envelope.
+// (the channel, the message list) instead of Slack's envelope. A dotted key walks nested
+// objects ("messages.matches" for search results).
 func extractField(raw json.RawMessage, key string) (json.RawMessage, error) {
-	var body map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &body); err != nil {
-		return nil, err
+	current := raw
+	for _, part := range strings.Split(key, ".") {
+		var body map[string]json.RawMessage
+		if err := json.Unmarshal(current, &body); err != nil {
+			return nil, err
+		}
+		field, ok := body[part]
+		if !ok {
+			// Some methods omit the field on success (e.g. an empty result); fall back to
+			// the full body rather than failing a successful call.
+			return raw, nil
+		}
+		current = field
 	}
-	field, ok := body[key]
-	if !ok {
-		// Some methods omit the field on success (e.g. an empty result); fall back to the
-		// full body rather than failing a successful call.
-		return raw, nil
-	}
-	return field, nil
+	return current, nil
 }
 
 // markKind stamps MCP annotations so the mcp server and agent guard can gate writes. A write

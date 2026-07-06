@@ -55,16 +55,16 @@ func TestResolveProfileName_Precedence(t *testing.T) {
 	assert.Equal(t, DefaultProfile, empty.ResolveProfileName(""))
 }
 
-func TestResolveProfileName_BotEnv(t *testing.T) {
+func TestResolveProfileName_WorkspaceEnv(t *testing.T) {
 	c := &Config{}
 	t.Setenv("SLACKCTL_PROFILE", "")
-	t.Setenv("SLACKCTL_BOT", "frombot")
-	assert.Equal(t, "frombot", c.ResolveProfileName(""))
+	t.Setenv("SLACKCTL_WORKSPACE", "fromws")
+	assert.Equal(t, "fromws", c.ResolveProfileName(""))
 	assert.Equal(t, "flag", c.ResolveProfileName("flag"), "flag still wins over env")
 
-	// SLACKCTL_BOT takes precedence over the legacy SLACKCTL_PROFILE alias.
+	// SLACKCTL_WORKSPACE takes precedence over the generic SLACKCTL_PROFILE alias.
 	t.Setenv("SLACKCTL_PROFILE", "legacy")
-	assert.Equal(t, "frombot", c.ResolveProfileName(""))
+	assert.Equal(t, "fromws", c.ResolveProfileName(""))
 }
 
 func TestValidateProfileName(t *testing.T) {
