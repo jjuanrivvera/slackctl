@@ -1,0 +1,113 @@
+{
+  "_comment": "Spec-derived manifest (cliwright GOAL.md §0/§11). The FULL Web API method set is enumerated from Slack's own docs index JSON (see api_method_source), not model recall. Verbs map 1:1 to Web API methods except the marked client-side composites. scripts/spec-check.sh enforces surface⊆manifest (consistency); scripts/spec-completeness.sh enforces manifest≈full-API (completeness). The Web API is RPC-method-oriented, not CRUD — verbs are the API's own actions (see DECISIONS.md). The surface is deliberately scoped to Slack-MCP parity + Socket Mode listen per the commissioning brief; the shortfall vs the 308-method enumeration is recorded as a coverage-waiver in DECISIONS.md (admin.* is Enterprise-Grid-only: 106 of the 308).",
+  "binary": "slackctl",
+  "base_url": "https://slack.com/api",
+  "auth": "bearer token (xoxb bot / xoxp user; xapp app-level for Socket Mode)",
+  "pagination": "cursor (response_metadata.next_cursor); page/count for search.*",
+  "profile_flag": "workspace",
+  "profile_noun": "workspace",
+  "api_method_total": 308,
+  "api_method_source": "https://docs.slack.dev/reference/methods.json (official docs index data, 2026-07-06) — 308 entries, cross-checked against sitemap.xml (308 /reference/methods/* URLs)",
+  "resources": [
+    {
+      "name": "conversations",
+      "aliases": ["conv", "channels"],
+      "verbs": ["list", "info", "history", "replies", "members", "create", "rename", "archive", "unarchive", "invite", "join", "leave", "kick", "set-topic", "set-purpose", "mark", "open", "close", "unreads"],
+      "methods": {
+        "list": "conversations.list", "info": "conversations.info", "history": "conversations.history",
+        "replies": "conversations.replies", "members": "conversations.members", "create": "conversations.create",
+        "rename": "conversations.rename", "archive": "conversations.archive", "unarchive": "conversations.unarchive",
+        "invite": "conversations.invite", "join": "conversations.join", "leave": "conversations.leave",
+        "kick": "conversations.kick", "set-topic": "conversations.setTopic", "set-purpose": "conversations.setPurpose",
+        "mark": "conversations.mark", "open": "conversations.open", "close": "conversations.close",
+        "unreads": "composite(users.conversations + conversations.info)"
+      },
+      "key_fields": ["id", "name", "is_private", "num_members"]
+    },
+    {
+      "name": "msg",
+      "aliases": ["chat", "message"],
+      "verbs": ["post", "update", "delete", "ephemeral", "me", "permalink", "schedule", "scheduled", "delete-scheduled"],
+      "methods": {
+        "post": "chat.postMessage", "update": "chat.update", "delete": "chat.delete",
+        "ephemeral": "chat.postEphemeral", "me": "chat.meMessage", "permalink": "chat.getPermalink",
+        "schedule": "chat.scheduleMessage", "scheduled": "chat.scheduledMessages.list",
+        "delete-scheduled": "chat.deleteScheduledMessage"
+      },
+      "key_fields": ["channel", "ts", "text"]
+    },
+    {
+      "name": "search",
+      "verbs": ["messages", "files", "all"],
+      "methods": { "messages": "search.messages", "files": "search.files", "all": "search.all" },
+      "token": "user",
+      "key_fields": ["text", "channel", "ts"]
+    },
+    {
+      "name": "users",
+      "aliases": ["user"],
+      "verbs": ["list", "info", "lookup-email", "conversations", "presence", "profile", "search"],
+      "methods": {
+        "list": "users.list", "info": "users.info", "lookup-email": "users.lookupByEmail",
+        "conversations": "users.conversations", "presence": "users.getPresence",
+        "profile": "users.profile.get", "search": "composite(users.list + client-side filter)"
+      },
+      "key_fields": ["id", "name", "real_name", "is_bot"]
+    },
+    {
+      "name": "usergroups",
+      "aliases": ["usergroup", "groups"],
+      "verbs": ["list", "create", "update", "enable", "disable", "members", "members-update"],
+      "methods": {
+        "list": "usergroups.list", "create": "usergroups.create", "update": "usergroups.update",
+        "enable": "usergroups.enable", "disable": "usergroups.disable",
+        "members": "usergroups.users.list", "members-update": "usergroups.users.update"
+      },
+      "key_fields": ["id", "handle", "name", "user_count"]
+    },
+    {
+      "name": "reactions",
+      "aliases": ["reaction"],
+      "verbs": ["add", "remove", "get", "list"],
+      "methods": { "add": "reactions.add", "remove": "reactions.remove", "get": "reactions.get", "list": "reactions.list" },
+      "key_fields": ["name", "count", "users"]
+    },
+    {
+      "name": "saved",
+      "aliases": ["stars"],
+      "verbs": ["list", "add", "remove"],
+      "methods": { "list": "stars.list", "add": "stars.add", "remove": "stars.remove" },
+      "token": "user",
+      "deprecated_note": "stars.* is Slack-deprecated (the Later tab has no public API yet); it is still the only saved-items surface the platform exposes",
+      "key_fields": ["type", "channel", "message"]
+    },
+    {
+      "name": "pins",
+      "aliases": ["pin"],
+      "verbs": ["list", "add", "remove"],
+      "methods": { "list": "pins.list", "add": "pins.add", "remove": "pins.remove" },
+      "key_fields": ["type", "channel", "message"]
+    },
+    {
+      "name": "emoji",
+      "verbs": ["list"],
+      "methods": { "list": "emoji.list" },
+      "read_only": true,
+      "key_fields": ["name", "url"]
+    },
+    {
+      "name": "team",
+      "verbs": ["info", "profile"],
+      "methods": { "info": "team.info", "profile": "team.profile.get" },
+      "read_only": true,
+      "key_fields": ["id", "name", "domain"]
+    }
+  ],
+  "methods": [
+    "auth.test (auth status / doctor)",
+    "apps.connections.open (slackctl listen — Socket Mode)"
+  ],
+  "special_ops": [
+    "listen: Socket Mode websocket stream (apps.connections.open + envelope ack), NDJSON per event, --dms/--channels/--events filters"
+  ]
+}
