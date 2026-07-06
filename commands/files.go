@@ -75,6 +75,7 @@ November 2025) and optionally share it into one or more conversations.`,
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			res, err := client.UploadFile(cmd.Context(), file, api.UploadOptions{
 				Title:          title,
 				Channels:       channels,
@@ -131,6 +132,7 @@ func filesDownloadCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			var info struct {
 				File struct {
 					Name         string `json:"name"`

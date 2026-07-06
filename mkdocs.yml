@@ -33,5 +33,6 @@ nav:
       - Authentication & tokens: authentication.md
       - Output & filtering: output.md
       - The listen command: listen.md
+      - Local history & search: history.md
       - AI agents: agents.md
   - Command reference: commands/slackctl.md

@@ -68,6 +68,7 @@ text is sent as a Block Kit JSON array instead of plain text.`,
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			raw, err := client.Call(cmd.Context(), "chat.postMessage", params, false)
 			if err != nil {
 				return err

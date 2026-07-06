@@ -32,6 +32,7 @@ by its replies. Bound the range with --oldest/--latest (unix or Slack ts).`,
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 
 			w := cmd.OutOrStdout()
 			if out != "" {

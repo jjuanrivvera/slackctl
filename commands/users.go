@@ -111,6 +111,7 @@ func usersSetStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			profile := map[string]any{
 				"status_text":       text,
 				"status_emoji":      emoji,
@@ -159,6 +160,7 @@ the exact address.`,
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			raw, err := client.CallAllPages(cmd.Context(), "users.list", map[string]any{"limit": 200}, "members", 0)
 			if err != nil {
 				return err

@@ -92,6 +92,11 @@ slackctl saved list                  # user token; legacy stars API
 slackctl listen --dms --json | jq -r '.text'
 slackctl listen --channels C0123 --since 1h --json     # replay recent history, then go live
 
+# Local history search (offline; recorded automatically as you use slackctl)
+slackctl log search "deploy failed"
+slackctl log --channel C0123 --since 24h -o json
+slackctl log stats
+
 # Escape hatch for unwrapped methods
 slackctl api conversations.info -q channel=C0123 --idempotent
 ```

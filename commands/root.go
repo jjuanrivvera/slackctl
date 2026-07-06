@@ -14,6 +14,7 @@ import (
 	"github.com/jjuanrivvera/slackctl/internal/auth"
 	"github.com/jjuanrivvera/slackctl/internal/config"
 	"github.com/jjuanrivvera/slackctl/internal/output"
+	"github.com/jjuanrivvera/slackctl/internal/store"
 )
 
 // registrations are applied to each fresh root command. Command files append to it in init().
@@ -111,6 +112,36 @@ func addGlobalFlags(root *cobra.Command) {
 	pf.Bool("quiet", false, "suppress notes on stderr")
 	pf.String("jq", "", "gojq expression applied to the result before rendering")
 	pf.Float64("rps", 0, "client-side requests-per-second cap (0 = default)")
+	pf.Bool("no-store", false, "do not record messages to the local history store (see `slackctl log`)")
+}
+
+// openWorkspaceStore opens the workspace's local history DB for the write (recorder) path.
+// Failure is never fatal here: nil means "recording is off for this call"; the caller keeps
+// going. The read path (`slackctl log`) treats an open failure as a real error instead.
+func openWorkspaceStore(cmd *cobra.Command, workspace string) *store.Store {
+	dir, err := config.Dir()
+	if err != nil {
+		warnStoreUnavailable(cmd, err)
+		return nil
+	}
+	path, err := store.PathFor(dir, workspace)
+	if err != nil {
+		warnStoreUnavailable(cmd, err)
+		return nil
+	}
+	st, err := store.Open(path)
+	if err != nil {
+		warnStoreUnavailable(cmd, err)
+		return nil
+	}
+	return st
+}
+
+func warnStoreUnavailable(cmd *cobra.Command, err error) {
+	if quiet, _ := cmd.Flags().GetBool("quiet"); quiet {
+		return
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "slackctl: warning: local history unavailable (%v) — continuing without it\n", err)
 }
 
 // clientFromCmd builds an API client with the default token for the command: the bot token,
@@ -164,7 +195,30 @@ func clientForKind(cmd *cobra.Command, kind auth.TokenKind) (*api.Client, error)
 	if rps > 0 {
 		opts = append(opts, api.WithRPS(rps))
 	}
+	// Local history recorder: best-effort and additive. A disabled/unavailable store never
+	// blocks building a client (a post still works without local history). Dry-run makes no
+	// request, so there is nothing to record — skip opening a DB file for it.
+	if !dryRun {
+		if rec := openRecorder(cmd, profileName); rec != nil {
+			opts = append(opts, api.WithRecorder(rec))
+		}
+	}
 	return api.New(authr, opts...), nil
+}
+
+// openRecorder opens the active workspace's local history store as a Recorder, honoring
+// --no-store. It returns nil (recording disabled) on any failure, warning once on stderr —
+// a broken store must never prevent building a client.
+func openRecorder(cmd *cobra.Command, workspace string) *storeRecorder {
+	if noStore, _ := cmd.Flags().GetBool("no-store"); noStore {
+		return nil
+	}
+	st := openWorkspaceStore(cmd, workspace)
+	if st == nil {
+		return nil
+	}
+	quiet, _ := cmd.Flags().GetBool("quiet")
+	return &storeRecorder{st: st, workspace: workspace, quiet: quiet, errW: cmd.ErrOrStderr()}
 }
 
 // allowsSessionFallback reports whether a browser-session (xoxc+xoxd) credential may stand

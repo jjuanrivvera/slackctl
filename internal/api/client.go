@@ -28,6 +28,8 @@ type Client struct {
 
 	dryRunW  io.Writer // where the --dry-run curl line is written (default os.Stderr)
 	verboseW io.Writer
+
+	recorder Recorder // optional observer of successful calls (local history); nil = no-op
 }
 
 // Option configures a Client.
@@ -72,8 +74,33 @@ func WithShowToken(v bool) Option          { return func(c *Client) { c.ShowToke
 func WithVerbose(v bool) Option            { return func(c *Client) { c.Verbose = v } }
 func WithDryRunWriter(w io.Writer) Option  { return func(c *Client) { c.dryRunW = w } }
 
+// WithRecorder attaches an observer notified after every successful, non-dry-run call — the
+// local message-history hook. internal/api stays generic (it knows nothing about SQLite) by
+// depending only on this narrow interface.
+func WithRecorder(r Recorder) Option { return func(c *Client) { c.recorder = r } }
+
 // BaseURL returns the configured base URL.
 func (c *Client) BaseURL() string { return c.baseURL }
+
+// Close releases resources an attached Recorder holds (e.g. the store's SQLite handle) if it
+// implements io.Closer. Safe to defer unconditionally: a nil or non-Closer recorder is a
+// no-op. This matters on Windows, where an open handle blocks deleting/renaming the file.
+func (c *Client) Close() error {
+	if closer, ok := c.recorder.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
+
+// maybeRecord offers a successful, non-dry-run result to the recorder. A nil recorder, a
+// dry-run, or an empty result are all silent no-ops; the recorder owns method filtering and
+// swallowing its own errors.
+func (c *Client) maybeRecord(ctx context.Context, method string, params map[string]any, result json.RawMessage) {
+	if c.recorder == nil || c.DryRun || len(result) == 0 {
+		return
+	}
+	c.recorder.Record(ctx, method, params, result)
+}
 
 // envelope is the part of every Web API response shared across methods. Slack returns the
 // method's payload as SIBLING fields of ok (channels, messages, members, ...), so Call hands
@@ -209,6 +236,10 @@ func (c *Client) call(ctx context.Context, method string, params map[string]any,
 		raw, env, apiErr := c.parse(resp, method)
 		if apiErr == nil {
 			c.limiter.reward()
+			// Offer every successful page/call to the recorder; it filters to message-bearing
+			// methods (chat.postMessage, conversations.history/replies). CallAllPages routes
+			// each page through here, so a full history walk is captured page by page.
+			c.maybeRecord(ctx, method, params, raw)
 			return raw, env, nil
 		}
 		lastErr = apiErr

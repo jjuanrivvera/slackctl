@@ -24,19 +24,20 @@ Every command honors --dry-run (prints the equivalent curl), -o/--output, and --
 ### Options
 
 ```
-      --as-user            use the stored user token (xoxp-) instead of the bot token
-      --base-url string    Web API base URL (default https://slack.com/api)
-      --columns strings    explicit, ordered table/csv columns
-      --dry-run            print the equivalent curl and make no request
-  -h, --help               help for slackctl
-      --jq string          gojq expression applied to the result before rendering
-      --no-color           disable colored output
-  -o, --output string      output format: table|json|yaml|csv|id (default "table")
-      --quiet              suppress notes on stderr
-      --rps float          client-side requests-per-second cap (0 = default)
-      --show-token         do not redact the token in --dry-run output
-  -v, --verbose            log raw API responses to stderr
-      --workspace string   workspace to use: a named profile/credential (env SLACKCTL_WORKSPACE)
+      --as-user                 use the stored user token (xoxp-) instead of the bot token
+      --base-url string         Web API base URL (default https://slack.com/api)
+      --columns strings         explicit, ordered table/csv columns
+      --dry-run                 print the equivalent curl and make no request
+  -h, --help                    help for slackctl
+      --jq string               gojq expression applied to the result before rendering
+      --no-color                disable colored output
+      --no-store slackctl log   do not record messages to the local history store (see slackctl log)
+  -o, --output string           output format: table|json|yaml|csv|id (default "table")
+      --quiet                   suppress notes on stderr
+      --rps float               client-side requests-per-second cap (0 = default)
+      --show-token              do not redact the token in --dry-run output
+  -v, --verbose                 log raw API responses to stderr
+      --workspace string        workspace to use: a named profile/credential (env SLACKCTL_WORKSPACE)
 ```
 
 ### SEE ALSO
@@ -57,6 +58,7 @@ Every command honors --dry-run (prints the equivalent curl), -o/--output, and --
 * [slackctl files](slackctl_files.md)	 - Upload, download, and manage files
 * [slackctl init](slackctl_init.md)	 - First-run wizard: capture tokens, verify, and save a workspace profile
 * [slackctl listen](slackctl_listen.md)	 - Stream events live (Socket Mode or RTM) as lines
+* [slackctl log](slackctl_log.md)	 - Search your local Slack message history
 * [slackctl mcp](slackctl_mcp.md)	 - MCP server management
 * [slackctl msg](slackctl_msg.md)	 - Post, edit, delete, and schedule messages
 * [slackctl pins](slackctl_pins.md)	 - Pin and unpin messages in a channel

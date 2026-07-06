@@ -147,7 +147,36 @@ pass and never silently re-decides.
   assistant.search.context, canvases.sections.lookup), so those reads pass the hatch while
   every mutating method stays blocked.
 
+## v0.3 — local message store (`log`)
+
+- **Why** → a local SQLite mirror of the messages slackctl sees, full-text searchable offline
+  — sidesteps Slack search being user-token-only AND rate-limited. Ports the proven tgctl
+  Recorder pattern (stripped during the fork), adapted to Slack message shapes.
+- **Driver** → modernc.org/sqlite (pure Go, no cgo) so `CGO_ENABLED=0` cross-compile keeps
+  working; FTS5 for full-text, with an automatic LIKE-scan fallback when a build lacks FTS5.
+- **Capture points** → the api.Client `Recorder` hook fires on every successful non-dry-run
+  call; the storeRecorder persists chat.postMessage/update (sends) and conversations.history/
+  replies (reads you fetch). `listen` records each streamed message event directly (events
+  don't pass through Call). So normal use — posting, browsing history, exporting, listening —
+  fills the store; `log search` then finds it with no API call.
+- **Privacy = opt-in-shaped** → recording is ON by default but easy to disable: global
+  `--no-store`; per-workspace DB under `<config>/history/<workspace>.db` at 0600 (holds
+  message text); `log prune`/`log path` for control. A store error NEVER fails a command
+  (warn-once and continue) — a broken history must not break a post.
+- **Dedup** → INSERT OR IGNORE on UNIQUE(workspace, channel, ts); re-fetching the same history
+  never duplicates, and FTS is only indexed on a genuinely-new row.
+- **Search robustness** → a plain query that isn't valid FTS5 (a bare `on-call` reads `-call`
+  as an operator) transparently falls back to a LIKE scan for that query, so search never
+  errors on ordinary input; power users still get FTS5 operators (AND/OR/NOT, prefix*, phrase).
+- **`since` as text** → Slack ts is fixed-width zero-padded, so it sorts chronologically as
+  text; a `--since 24h` duration resolves to a unix-seconds lower bound compared directly.
+- **Agent surface** → `log` is excluded from the MCP tool surface and the guard's local-groups
+  allowlist (it reads potentially-sensitive local message text; not something an agent should
+  browse unprompted). Every command that builds a client now `defer`s client.Close() so the
+  store's SQLite handle is released (matters on Windows, where an open handle blocks temp
+  cleanup).
+
 ## Testing
 
-- **Live smoke test** → skipped: no test workspace/credentials provided (mocks only). Never
-  a hard gate (GOAL.md §4 Phase F2).
+- **Live smoke test** → skipped for unit CI (mocks only); done manually against a real
+  workspace at each release. Never a hard gate (GOAL.md §4 Phase F2).

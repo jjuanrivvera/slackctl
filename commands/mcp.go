@@ -10,7 +10,7 @@ import (
 // per-command read-only/write/destructive annotations). The `mcp` and `agent` subtrees are
 // excluded too so an agent can neither re-enter the server nor disable its own guardrails.
 var excludedFromMCP = []string{
-	"agent", "auth", "config", "alias", "init", "doctor", "completion", "version", "api",
+	"agent", "auth", "config", "alias", "init", "doctor", "completion", "version", "api", "log",
 	// `listen` is a long-running stream — never expose a blocking command as a tool an
 	// agent could call and hang on.
 	"listen",

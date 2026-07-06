@@ -31,6 +31,7 @@ membership lists expect it to take a few seconds under Slack's rate limits.`,
 			if err != nil {
 				return err
 			}
+			defer func() { _ = client.Close() }()
 			params := map[string]any{"limit": 200}
 			if types != "" {
 				params["types"] = types

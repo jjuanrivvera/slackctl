@@ -3,6 +3,19 @@
 All notable changes to slackctl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.3.0] - 2026-07-06
+
+### Added
+- **Local message history + search (`slackctl log`).** slackctl records the messages it sees
+  — posts, fetched history/replies, and streamed `listen` events — into a per-workspace
+  SQLite database (pure-Go, FTS5). Search it offline and instantly, without Slack's
+  user-token-only, rate-limited search API:
+  - `log` / `log search <query>` (FTS5 operators, with a graceful substring fallback),
+    filterable by `--channel`/`--user`/`--since`.
+  - `log stats`, `log path`, `log prune --older-than <dur>`.
+  - Recording is on by default; disable with `--no-store`. The DB holds message text — it is
+    per-workspace, `0600`, local-only, and `log` is excluded from the MCP tool surface.
+
 ## [0.2.1] - 2026-07-06
 
 ### Fixed

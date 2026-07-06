@@ -205,6 +205,7 @@ func buildMethodCmd(mc methodCmd) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		defer func() { _ = client.Close() }()
 		idempotent := mc.Kind == kindRead
 		var raw json.RawMessage
 		if mc.Paginated {

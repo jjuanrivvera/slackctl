@@ -16,6 +16,7 @@ import (
 	"github.com/jjuanrivvera/slackctl/internal/rtm"
 	"github.com/jjuanrivvera/slackctl/internal/slackevent"
 	"github.com/jjuanrivvera/slackctl/internal/socketmode"
+	"github.com/jjuanrivvera/slackctl/internal/store"
 )
 
 // listen is the beyond-the-REST-mold command: a live event stream for pipe/filter use. It
@@ -76,9 +77,26 @@ Runs until Ctrl-C.`,
 			eventSet := toSet(events)
 			out := cmd.OutOrStdout()
 
+			// Persist every message event to the local history (unless --no-store) so
+			// `slackctl log` can search the live stream — the searchable-mirror model. This
+			// is deliberately BEFORE the display filters: filters shape output, not capture.
+			noStore, _ := cmd.Flags().GetBool("no-store")
+			var histStore *store.Store
+			var workspace string
+			if !noStore {
+				workspace, _, _ = resolveProfileName(cmd)
+				histStore = openWorkspaceStore(cmd, workspace)
+				if histStore != nil {
+					defer func() { _ = histStore.Close() }()
+				}
+			}
+
 			// emit applies the shared filter + render to a bare event object (the same shape
 			// from both transports), so RTM and Socket Mode behave identically downstream.
 			emit := func(event json.RawMessage, meta slackevent.Meta) {
+				if histStore != nil {
+					recordEvent(cmd.Context(), histStore, workspace, meta.ChannelOf(), event)
+				}
 				if len(eventSet) > 0 && !eventSet[meta.Type] {
 					return
 				}
@@ -137,6 +155,7 @@ func backfillSince(cmd *cobra.Command, channels []string, since string, emit fun
 	if err != nil {
 		return err
 	}
+	defer func() { _ = client.Close() }()
 	for _, ch := range channels {
 		raw, err := client.CallAllPages(cmd.Context(), "conversations.history",
 			map[string]any{"channel": ch, "oldest": oldest, "limit": 200}, "messages", 0)
@@ -228,6 +247,7 @@ func runSocketMode(cmd *cobra.Command, out io.Writer, rawOut, debugReconnects bo
 	if err != nil {
 		return err
 	}
+	defer func() { _ = client.Close() }()
 	if client.DryRun {
 		return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
 	}
@@ -256,6 +276,7 @@ func runRTM(cmd *cobra.Command, out io.Writer, rawOut bool, emit func(json.RawMe
 	if err != nil {
 		return err
 	}
+	defer func() { _ = client.Close() }()
 	if client.DryRun {
 		return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
 	}

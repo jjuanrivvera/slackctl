@@ -244,6 +244,7 @@ func authStatusCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("not authenticated (workspace %q): %w", profileName, err)
 			}
+			defer func() { _ = client.Close() }()
 			id, err := client.AuthTest(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("token invalid for workspace %q: %w", profileName, err)

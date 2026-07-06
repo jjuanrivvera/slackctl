@@ -112,6 +112,7 @@ pins           list · add · remove       bookmarks   list · add · edit · re
 saved          list · add · remove                      (stars API; user token)
 emoji          list          team    info · profile
 listen         live event stream: Socket Mode (app token) OR RTM (session/user)
+log            search your local message history (list · search · stats · prune · path)
 auth · config · init · doctor · completion · alias · api · version · mcp · agent
 ```
 
@@ -160,6 +161,24 @@ shut down cleanly on Ctrl-C.
 > session tokens — it works today but could be disabled, and some Enterprise Grid workspaces
 > block it. For a durable listener, create a Slack app (no need to publish it), grab an
 > app-level token, and use `--transport socket`.
+
+## Local history & search
+
+slackctl records the messages it sees — posts, fetched history/replies, and streamed `listen`
+events — into a per-workspace SQLite database, so you can full-text search your Slack history
+**offline and without Slack's user-token-only, rate-limited search API**.
+
+```sh
+slackctl listen --channels C0123 &          # mirror a channel in real time
+slackctl log search "deploy failed"          # search it offline, instantly
+slackctl log --channel C0123 --since 24h     # filter by channel + time
+slackctl log stats                           # size + FTS mode        log path
+slackctl log prune --older-than 2160h        # drop anything older than 90 days
+```
+
+Recording is on by default; disable it with `--no-store` (per call). The database holds
+message text — it lives at `slackctl log path` with `0600` perms, is never uploaded, and `log`
+is excluded from the MCP tool surface. See the [history guide](https://jjuanrivvera.github.io/slackctl/history/).
 
 ## AI agents
 

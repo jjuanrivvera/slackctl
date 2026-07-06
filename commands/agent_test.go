@@ -114,7 +114,7 @@ func TestClassifyAPICommands(t *testing.T) {
 func TestEveryAPICommandIsAnnotated(t *testing.T) {
 	localGroups := map[string]bool{
 		"auth": true, "config": true, "init": true, "doctor": true, "completion": true,
-		"alias": true, "version": true, "mcp": true, "agent": true, "help": true,
+		"alias": true, "version": true, "mcp": true, "agent": true, "help": true, "log": true,
 		// `api` is the raw escape hatch: excluded from MCP entirely and gated by the hook
 		// at the method position, so it carries no per-command annotation.
 		"api": true,
