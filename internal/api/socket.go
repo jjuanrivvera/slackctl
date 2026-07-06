@@ -3,7 +3,21 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
+
+// DialHeaders returns the credential headers a WebSocket handshake must carry beyond the
+// URL ticket. For a browser-session credential this is the `Cookie: d=<xoxd>` header, which
+// the RTM gateway re-validates on the WebSocket UPGRADE (not just on the rtm.connect HTTP
+// call) — without it the gateway answers invalid_auth. For a plain token it is empty (the
+// URL ticket authenticates), so this is safe to apply for every transport.
+func (c *Client) DialHeaders() http.Header {
+	h := http.Header{}
+	for k, v := range c.auth.ExtraHeaders(false) {
+		h.Set(k, v)
+	}
+	return h
+}
 
 // OpenSocketURL asks apps.connections.open for a fresh Socket Mode wss:// URL. It requires
 // an app-level token (xapp-, scope connections:write); Slack's URLs are single-use tickets,

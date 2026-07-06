@@ -40,6 +40,19 @@ func TestSessionAuth_SendsTokenAndCookie(t *testing.T) {
 	assert.Equal(t, "d=xoxd-cookieval", gotCookie, "the d cookie carries the session")
 }
 
+func TestDialHeaders(t *testing.T) {
+	// A session credential must expose the d cookie for the WebSocket handshake.
+	sess, err := NewSessionAuth("xoxc-abc", "xoxd-def")
+	require.NoError(t, err)
+	h := New(sess).DialHeaders()
+	assert.Equal(t, "d=xoxd-def", h.Get("Cookie"))
+
+	// A plain token has no extra handshake headers (the URL ticket authenticates).
+	tok, err := NewTokenAuth("xoxb-abc")
+	require.NoError(t, err)
+	assert.Empty(t, New(tok).DialHeaders().Get("Cookie"))
+}
+
 func TestSessionAuth_MethodAndRedaction(t *testing.T) {
 	authr, err := NewSessionAuth("xoxc-supersecret", "xoxd-supersecret")
 	require.NoError(t, err)

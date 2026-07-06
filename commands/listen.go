@@ -184,6 +184,9 @@ func runRTM(cmd *cobra.Command, out io.Writer, rawOut bool, emit func(json.RawMe
 		return fmt.Errorf("listen opens a live websocket; --dry-run has nothing to print")
 	}
 	rc := rtm.New(client.OpenRTMURL, cmd.ErrOrStderr())
+	// Session credentials must send the d cookie on the WebSocket handshake too, or the RTM
+	// gateway answers invalid_auth even though rtm.connect succeeded.
+	rc.Header = client.DialHeaders()
 	return rc.Run(cmd.Context(), func(frame json.RawMessage) {
 		if rawOut {
 			fmt.Fprintln(out, string(frame))

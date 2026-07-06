@@ -232,6 +232,38 @@ func TestRun_SkipsUnparseableFrames(t *testing.T) {
 	assert.Equal(t, 1, got)
 }
 
+func TestDial_SendsCredentialHeaders(t *testing.T) {
+	var gotCookie string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotCookie = r.Header.Get("Cookie") // captured from the WebSocket UPGRADE request
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		send(r.Context(), c, map[string]any{"type": "hello"})
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	c := New(func(context.Context) (string, error) { return wsURL, nil }, io.Discard)
+	c.rng = func() float64 { return 0 }
+	c.PingInterval = -1
+	c.Header = http.Header{"Cookie": {"d=xoxd-session-cookie"}}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	// Cancel shortly after connect; we only need the handshake to happen.
+	go func() {
+		_, err := c.runOnce(ctx, func(json.RawMessage) {})
+		done <- err
+	}()
+	// Give the handshake a moment, then stop.
+	go func() { time.Sleep(200 * time.Millisecond); cancel() }()
+	<-done
+	assert.Equal(t, "d=xoxd-session-cookie", gotCookie, "the d cookie must ride the WebSocket handshake (RTM gateway re-validates it)")
+}
+
 func TestBackoff_CappedAndNonZero(t *testing.T) {
 	c := New(nil, io.Discard)
 	for attempt := 1; attempt < 12; attempt++ {

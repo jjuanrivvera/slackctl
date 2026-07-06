@@ -13,6 +13,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/coder/websocket"
@@ -34,6 +35,10 @@ type Client struct {
 	Dial func(ctx context.Context, url string) (conn, error)
 	// Log receives connection-lifecycle notes (connected, reconnecting). Never event data.
 	Log io.Writer
+	// Header carries credential headers on the WebSocket handshake. For a browser-session
+	// token this holds `Cookie: d=<xoxd>`, which the RTM gateway validates on the UPGRADE —
+	// the URL ticket alone answers invalid_auth for xoxc tokens.
+	Header http.Header
 	// PingInterval is how often to send an application-level RTM ping to keep the
 	// connection alive. Zero uses the 30s default; negative disables pings (tests).
 	PingInterval time.Duration
@@ -43,19 +48,24 @@ type Client struct {
 
 // New builds a Client over an OpenURL func (which calls rtm.connect).
 func New(openURL func(ctx context.Context) (string, error), logW io.Writer) *Client {
-	return &Client{
+	c := &Client{
 		OpenURL: openURL,
-		Dial: func(ctx context.Context, url string) (conn, error) {
-			c, _, err := websocket.Dial(ctx, url, nil) //nolint:bodyclose // library owns the handshake response
-			if err != nil {
-				return nil, err
-			}
-			c.SetReadLimit(1 << 22) // RTM message events can be large
-			return c, nil
-		},
-		Log: logW,
-		rng: rand.Float64, //nolint:gosec // G404: reconnect jitter is not a security boundary
+		Log:     logW,
+		rng:     rand.Float64, //nolint:gosec // G404: reconnect jitter is not a security boundary
 	}
+	c.Dial = func(ctx context.Context, url string) (conn, error) {
+		var opts *websocket.DialOptions
+		if len(c.Header) > 0 {
+			opts = &websocket.DialOptions{HTTPHeader: c.Header}
+		}
+		ws, _, err := websocket.Dial(ctx, url, opts) //nolint:bodyclose // library owns the handshake response
+		if err != nil {
+			return nil, err
+		}
+		ws.SetReadLimit(1 << 22) // RTM message events can be large
+		return ws, nil
+	}
+	return c
 }
 
 // Run connects and streams every event frame to handler until ctx is cancelled. RTM needs
