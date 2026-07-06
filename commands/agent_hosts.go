@@ -11,7 +11,7 @@ import (
 // Each emits both binary (Bash) patterns and MCP tool patterns where the host supports them,
 // so an agent driving slackctl either way hits the same rails.
 
-// destructiveAPIMethods returns the unique, sorted Bot API method names in the hard-block
+// destructiveAPIMethods returns the unique, sorted Web API method names in the hard-block
 // bucket, for the raw `slackctl api <method>` deny rules.
 func destructiveAPIMethods(c classification) []string {
 	seen := map[string]bool{}
@@ -44,15 +44,15 @@ func renderClaudeCode(c classification) (string, error) {
 		}
 		deny = append(deny, mcpToolPattern(cmd.Path))
 	}
-	// Raw `slackctl api <method>` escape hatch: deny the known-destructive Bot API methods
-	// by name. These are exact prefix rules; the hook goes further and blocks every
-	// non-get method, because Telegram treats method names case-insensitively
-	// (DELETEMESSAGE works) which literal prefix rules cannot cover.
+	// Raw `slackctl api <method>` escape hatch: deny the known-destructive Web API methods
+	// by name. These are exact prefix rules; the hook goes further and blocks every method
+	// whose final dot-segment is not a read shape, so unlisted writes (chat.update,
+	// conversations.setTopic, admin.*) cannot slip through the raw hatch.
 	for _, m := range destructiveAPIMethods(c) {
 		deny = append(deny, bashPattern("api "+m))
 	}
 	// `slackctl alias set` can mint a shorthand that expands to a blocked command before
-	// cobra parses it (slackctl alias set x "message delete"; slackctl x) — deny creating
+	// cobra parses it (slackctl alias set x "msg delete"; slackctl x) — deny creating
 	// new indirections.
 	deny = append(deny, bashPattern("alias set"))
 	for _, cmd := range c.Write {
@@ -109,9 +109,10 @@ func renderClaudeCode(c classification) (string, error) {
 // hookScript generates the PreToolUse hook. Commands are matched by exact SUBCOMMAND PATH
 // at the command position — never by bare verbs anywhere in the line — with an optional
 // path prefix before the binary so ./bin/slackctl and /usr/local/bin/slackctl are caught too.
-// The raw `slackctl api <method>` escape hatch is gated at the method position: only
-// read-only get* methods pass, because Bot API method names are case-insensitive
-// server-side (DELETEMESSAGE works), so an allowlist of destructive names is not enough.
+// The raw `slackctl api <method>` escape hatch is gated at the method position: a method
+// passes only when its final dot-segment is a read shape (get*/list/info/test/history/
+// replies/members/…) — how every read in Slack's naming ends — so unlisted writes cannot
+// slip through and a deny-list of destructive names is unnecessary.
 func hookScript(c classification) string {
 	seenCLI := map[string]bool{}
 	seenTool := map[string]bool{}
@@ -177,10 +178,11 @@ func hookScript(c classification) string {
 # The MCP branch is an exact set-membership check — no glob or regex.
 #
 # The raw "slackctl api <method>" escape hatch is gated at the METHOD position:
-# only read-only get* methods pass. Bot API method names are case-insensitive
-# server-side (DELETEMESSAGE works), so everything not starting with "get" —
-# including flags-before-method invocations — is blocked. A -q value or path
-# that merely CONTAINS "delete" is not affected.
+# a method passes only when its final dot-segment is a read shape (get*/list/
+# info/test/history/replies/members/messages/files/all/lookupByEmail/
+# conversations) — how every read in Slack's method naming ends. Everything
+# else — including flags-before-method invocations — is blocked. A -q value or
+# path that merely CONTAINS "delete" is not affected.
 #
 # De-obfuscation: quotes (\042 / \047) and backslash (\134) are stripped from
 # the raw command string before pattern matching to defeat trivial tricks like
@@ -226,18 +228,20 @@ bash_is_blocked() {
 }
 
 # api_is_blocked returns 0 (true) if the command invokes the raw "slackctl api"
-# escape hatch with anything other than a read-only get* method. Separators
-# are flattened first so every api invocation in a compound line is scanned
-# ("slackctl api getMe;slackctl api deleteWebhook" cannot hide behind the first
-# match), then the token after each "api" is checked case-insensitively.
+# escape hatch with anything other than a read-shaped method. Separators are
+# flattened first so every api invocation in a compound line is scanned
+# ("slackctl api auth.test;slackctl api chat.delete" cannot hide behind the
+# first match), then the token after each "api" is allowed only when its final
+# dot-segment is a read shape, matched case-insensitively.
 api_is_blocked() {
   local cleaned="$1"
-  local flat m
+  local flat m seg
   flat=$(printf '%s' "$cleaned" | tr ';|&()' '     ')
   while IFS= read -r m; do
     [ -n "$m" ] || continue
-    case "$m" in
-      [Gg][Ee][Tt]*) ;; # read-only getX methods are allowed
+    seg="${m##*.}"
+    case "$seg" in
+      [Gg][Ee][Tt]*|[Ll][Ii][Ss][Tt]|[Ii][Nn][Ff][Oo]|[Tt][Ee][Ss][Tt]|[Hh][Ii][Ss][Tt][Oo][Rr][Yy]|[Rr][Ee][Pp][Ll][Ii][Ee][Ss]|[Mm][Ee][Mm][Bb][Ee][Rr][Ss]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee][Ss]|[Ff][Ii][Ll][Ee][Ss]|[Aa][Ll][Ll]|[Ll][Oo][Oo][Kk][Uu][Pp][Bb][Yy][Ee][Mm][Aa][Ii][Ll]|[Cc][Oo][Nn][Vv][Ee][Rr][Ss][Aa][Tt][Ii][Oo][Nn][Ss]) ;; # read shapes pass
       *) return 0 ;;
     esac
   done < <(printf '%s' "$flat" \
@@ -282,7 +286,7 @@ case "$tool" in
       deny "slackctl agent guard: irreversible operation blocked."
     fi
     if api_is_blocked "$cleaned"; then
-      deny "slackctl agent guard: raw api call blocked (only get* methods pass). Use dedicated commands or MCP-only mode."
+      deny "slackctl agent guard: raw api call blocked (only read-shaped methods pass). Use dedicated commands or MCP-only mode."
     fi
     ;;
   *)
@@ -304,18 +308,19 @@ func renderCodex(c classification) (string, error) {
 	var b strings.Builder
 	b.WriteString("# Generated by `slackctl agent guard --host codex`.\n")
 	b.WriteString("# Read-only sandbox: slackctl writes require explicit approval; reads run freely.\n")
-	b.WriteString("approval_policy = \"on-request\"\n\n")
-	b.WriteString("[sandbox]\n")
-	b.WriteString("mode = \"read-only\"\n\n")
+	// Codex reads TOP-LEVEL sandbox_mode/approval_policy keys; an invented [sandbox]
+	// table is silently ignored — dead config that reads as coverage (GOAL.md §3b #8).
+	b.WriteString("approval_policy = \"on-request\"\n")
+	b.WriteString("sandbox_mode = \"read-only\"\n\n")
 	b.WriteString("# Never auto-approve these irreversible slackctl operations (nor their cobra\n")
 	b.WriteString("# alias paths, e.g. `slackctl msg delete`, `slackctl message delete-many`):\n")
 	for _, cmd := range c.Destructive {
 		fmt.Fprintf(&b, "#   slackctl %s   (%s)\n", cmd.Path, cmd.Method)
 	}
 	b.WriteString("#\n")
-	b.WriteString("# The raw escape hatch `slackctl api <method>` can call ANY Bot API method and\n")
-	b.WriteString("# method names are case-insensitive server-side — never auto-approve an api\n")
-	b.WriteString("# call whose method does not start with `get`.\n")
+	b.WriteString("# The raw escape hatch `slackctl api <method>` can call ANY Web API method —\n")
+	b.WriteString("# never auto-approve an api call whose method's final dot-segment is not a\n")
+	b.WriteString("# read shape (get*/list/info/test/history/replies/members/…).\n")
 	b.WriteString("# `slackctl alias set` can mint a shorthand for a blocked command — never\n")
 	b.WriteString("# auto-approve it.\n")
 	b.WriteString("\n# These writes should require approval:\n")

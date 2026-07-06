@@ -87,7 +87,8 @@ sends message events for conversations the bot is a member of. Runs until Ctrl-C
 				}
 				// --dms / --channels union: match either; no filter = everything.
 				if dms || len(channelSet) > 0 {
-					if !(dms && meta.IsDM()) && !channelSet[meta.ChannelOf()] {
+					dmMatch := dms && meta.IsDM()
+					if !dmMatch && !channelSet[meta.ChannelOf()] {
 						return
 					}
 				}

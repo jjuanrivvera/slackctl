@@ -80,11 +80,11 @@ func (c *Client) Run(ctx context.Context, handler func(Envelope)) error {
 	var attempt int
 	for {
 		if err := ctx.Err(); err != nil {
-			return nil // cancelled between connections: a clean shutdown, not an error
+			return nil //nolint:nilerr // cancellation between connections is a clean shutdown, not an error
 		}
 		helloSeen, err := c.runOnce(ctx, handler)
 		if ctx.Err() != nil {
-			return nil // Ctrl-C mid-read surfaces as a read error; treat as clean shutdown
+			return nil //nolint:nilerr // Ctrl-C mid-read surfaces as a read error; treat as clean shutdown
 		}
 		if helloSeen {
 			attempt = 0 // the connection was healthy; don't punish routine rotation
@@ -96,7 +96,7 @@ func (c *Client) Run(ctx context.Context, handler func(Envelope)) error {
 		wait := c.backoff(attempt)
 		c.logf("reconnecting in %s…", wait.Round(time.Millisecond))
 		if serr := sleepCtx(ctx, wait); serr != nil {
-			return nil
+			return nil //nolint:nilerr // the only sleep error is ctx cancellation — clean shutdown
 		}
 	}
 }

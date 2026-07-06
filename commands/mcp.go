@@ -11,22 +11,23 @@ import (
 // excluded too so an agent can neither re-enter the server nor disable its own guardrails.
 var excludedFromMCP = []string{
 	"agent", "auth", "config", "alias", "init", "doctor", "completion", "version", "api",
-	// `webhook listen` is a long-running local server — never expose a blocking command as a
-	// tool an agent could call and hang on.
+	// `listen` is a long-running stream — never expose a blocking command as a tool an
+	// agent could call and hang on.
 	"listen",
 }
 
 // secretFlags must never reach the MCP tool schema: an agent must not read the token or
-// switch bots. The server uses whatever bot/profile is active at startup. Both the --bot flag
-// and its deprecated --profile alias are excluded.
-var secretFlags = []string{"show-token", "bot", "profile", "base-url"}
+// switch workspaces. The server uses whatever workspace/profile is active at startup. Both
+// the --workspace flag and its hidden --profile alias are excluded, as is --as-user (token
+// escalation: bot → human identity).
+var secretFlags = []string{"show-token", "workspace", "profile", "base-url", "as-user"}
 
 func init() {
 	register(func(root *cobra.Command) {
 		// ophis walks the command tree and exposes each runnable leaf as an MCP tool, replaying
 		// the cobra command on invocation so tools reuse the same client, keyring, and profile.
 		root.AddCommand(ophis.Command(&ophis.Config{
-			ToolNamePrefix: "tg",
+			ToolNamePrefix: "slack",
 			Selectors: []ophis.Selector{{
 				CmdSelector:           ophis.ExcludeCmdsContaining(excludedFromMCP...),
 				InheritedFlagSelector: ophis.ExcludeFlags(secretFlags...),
