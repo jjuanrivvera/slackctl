@@ -20,6 +20,9 @@ $ slackctl listen --dms --json | jq -r .text
 ## Install
 
 ```sh
+# Install script (macOS / Linux) — downloads the release binary, verifies its checksum
+curl -fsSL https://raw.githubusercontent.com/jjuanrivvera/slackctl/main/install.sh | sh
+
 # From source (Go 1.24+)
 go install github.com/jjuanrivvera/slackctl/cmd/slackctl@latest
 
