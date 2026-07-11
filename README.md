@@ -1,5 +1,7 @@
 # slackctl
 
+> 🏭 Part of the [cliwright](https://cliwright.jjuanrivvera.com) CLI fleet.
+
 📖 **Docs:** <https://jjuanrivvera.github.io/slackctl/>
 
 A fast, scriptable command-line tool for the **Slack Web API** — `gh`-style ergonomics,
@@ -222,10 +224,6 @@ is best-effort (documented limits: variable indirection, shell aliases).
 `spec-check` (CLI surface ⊆ `api-manifest.json`), `spec-completeness` (manifest vs the
 enumerated 308-method API), and the Definition-of-Done checks. See `AGENTS.md` and
 `DECISIONS.md` for architecture and pinned assumptions.
-
-## Built with cliwright
-
-Part of a fleet of single-purpose CLIs generated with [cliwright](https://cliwright.jjuanrivvera.com) — browse them all at **[cliwright.jjuanrivvera.com](https://cliwright.jjuanrivvera.com)**.
 
 ## License
 
