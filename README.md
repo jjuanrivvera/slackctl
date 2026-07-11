@@ -223,6 +223,10 @@ is best-effort (documented limits: variable indirection, shell aliases).
 enumerated 308-method API), and the Definition-of-Done checks. See `AGENTS.md` and
 `DECISIONS.md` for architecture and pinned assumptions.
 
+## Built with cliwright
+
+Part of a fleet of single-purpose CLIs generated with [cliwright](https://cliwright.jjuanrivvera.com) — browse them all at **[cliwright.jjuanrivvera.com](https://cliwright.jjuanrivvera.com)**.
+
 ## License
 
 MIT
