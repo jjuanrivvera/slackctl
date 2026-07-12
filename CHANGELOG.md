@@ -3,6 +3,20 @@
 All notable changes to slackctl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.3.2] - 2026-07-12
+
+### Security
+- Bump the Go toolchain to **go1.25.12**, clearing the reachable standard-library advisories
+  (crypto/tls GO-2026-5856, crypto/x509, net/http, net/textproto) that govulncheck flagged.
+
+## [0.3.1] - 2026-07-12
+
+### Fixed
+- The hidden secret prompt (`auth login`) now reads in **raw mode** instead of
+  `term.ReadPassword`'s canonical mode (capped at MAX_CANON, 1024 bytes on macOS), so a long
+  pasted token no longer hangs the prompt until Ctrl-C. Bracketed-paste markers are still
+  stripped as a defensive guard.
+
 ## [0.3.0] - 2026-07-06
 
 ### Added
