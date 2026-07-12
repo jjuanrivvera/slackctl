@@ -1,26 +1,36 @@
 package commands
 
 import (
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestSanitizeSecret(t *testing.T) {
-	cases := []struct {
-		name string
-		in   string
-		want string
-	}{
-		{"bracketed paste wrappers stripped", "\x1b[200~KEY\x1b[201~\n", "KEY"},
-		{"clean key unchanged", "KEY", "KEY"},
-		{"surrounding whitespace trimmed", "  KEY  ", "KEY"},
-		{"lone start marker stripped", "\x1b[200~KEY", "KEY"},
-		{"lone end marker stripped", "KEY\x1b[201~", "KEY"},
+func TestScanSecretLine(t *testing.T) {
+	// A long paste (well past canonical mode's 1024-char MAX_CANON) reads intact — the whole point.
+	long := strings.Repeat("A", 2000)
+	if got, err := scanSecretLine(strings.NewReader(long + "\r")); err != nil || got != long {
+		t.Errorf("long line: len=%d err=%v", len(got), err)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, sanitizeSecret(tc.in))
-		})
+	// Stops at LF; Backspace (0x7f) edits.
+	if got, _ := scanSecretLine(strings.NewReader("ab\x7fc\n")); got != "ac" {
+		t.Errorf("backspace: %q", got)
+	}
+	// Ctrl-C cancels.
+	if _, err := scanSecretLine(strings.NewReader("\x03")); err == nil {
+		t.Error("Ctrl-C should cancel")
+	}
+	// EOF with buffered content still returns it.
+	if got, _ := scanSecretLine(strings.NewReader("xyz")); got != "xyz" {
+		t.Errorf("EOF: %q", got)
+	}
+}
+
+func TestSanitizeSecret(t *testing.T) {
+	key := "eyJhbGci.payload.sig"
+	if got := sanitizeSecret("\x1b[200~" + key + "\x1b[201~\n"); got != key {
+		t.Errorf("bracketed paste not stripped: %q", got)
+	}
+	if got := sanitizeSecret("  " + key + "  "); got != key {
+		t.Errorf("trim: %q", got)
 	}
 }
