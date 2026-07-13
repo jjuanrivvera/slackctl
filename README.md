@@ -1,8 +1,23 @@
+<div align="center">
+
 # slackctl
 
-> 🏭 Part of the [cliwright](https://cliwright.jjuanrivvera.com) CLI fleet.
+[![CI](https://github.com/jjuanrivvera/slackctl/actions/workflows/ci.yml/badge.svg)](https://github.com/jjuanrivvera/slackctl/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/jjuanrivvera/slackctl)](https://github.com/jjuanrivvera/slackctl/releases/latest)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)](https://github.com/jjuanrivvera/slackctl/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jjuanrivvera/slackctl.svg)](https://pkg.go.dev/github.com/jjuanrivvera/slackctl)
+[![Go version](https://img.shields.io/github/go-mod/go-version/jjuanrivvera/slackctl)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jjuanrivvera/slackctl)
+[![Built with cliwright](https://img.shields.io/badge/built_with-cliwright-1f6feb)](https://cliwright.jjuanrivvera.com)
 
-📖 **Docs:** <https://jjuanrivvera.github.io/slackctl/>
+**A CLI for the Slack Web API — with a Socket Mode event listener and local full-text message history.**
+
+[Documentation](https://jjuanrivvera.github.io/slackctl/) · [Commands](https://jjuanrivvera.github.io/slackctl/commands/)
+
+</div>
+
+---
 
 A fast, scriptable command-line tool for the **Slack Web API** — `gh`-style ergonomics,
 table/json/yaml/csv output, named profiles for multiple workspaces, OS-keyring token
