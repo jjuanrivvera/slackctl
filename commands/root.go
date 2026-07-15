@@ -74,7 +74,7 @@ var commandGroups = map[string]string{
 	"reactions": "messages", "pins": "messages", "bookmarks": "messages",
 	"saved": "messages", "emoji": "messages",
 	"auth": "meta", "config": "meta", "init": "meta", "doctor": "meta",
-	"alias": "meta", "api": "meta", "version": "meta", "completion": "meta",
+	"alias": "meta", "api": "meta", "version": "meta", "completion": "meta", "update": "meta",
 	"mcp": "agents", "agent": "agents",
 }
 
