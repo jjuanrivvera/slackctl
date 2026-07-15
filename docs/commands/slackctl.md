@@ -66,6 +66,7 @@ Every command honors --dry-run (prints the equivalent curl), -o/--output, and --
 * [slackctl saved](slackctl_saved.md)	 - Saved items (legacy stars API; needs a user token)
 * [slackctl search](slackctl_search.md)	 - Search messages and files (needs a user token)
 * [slackctl team](slackctl_team.md)	 - Workspace information
+* [slackctl update](slackctl_update.md)	 - Update slackctl to the latest release
 * [slackctl usergroups](slackctl_usergroups.md)	 - Manage user groups (@mention groups)
 * [slackctl users](slackctl_users.md)	 - Look up and list workspace users
 * [slackctl version](slackctl_version.md)	 - Print version, commit, and build date
