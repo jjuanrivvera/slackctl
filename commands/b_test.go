@@ -149,7 +149,7 @@ func TestListen_SinceBackfill(t *testing.T) {
 	var outbuf, errbuf strings.Builder
 	root.SetOut(&outbuf)
 	root.SetErr(&errbuf)
-	root.SetArgs([]string{"listen", "--channels", "C1", "--since", "1h", "--json", "--base-url", apiSrv.URL})
+	root.SetArgs([]string{"listen", "--channels", "C1", "--since", "1h", "--json", "--no-store", "--base-url", apiSrv.URL})
 
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
