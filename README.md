@@ -15,6 +15,9 @@
 
 [Documentation](https://jjuanrivvera.github.io/slackctl/) · [Commands](https://jjuanrivvera.github.io/slackctl/commands/)
 
+
+![slackctl in action](assets/demo.gif)
+
 </div>
 
 ---
